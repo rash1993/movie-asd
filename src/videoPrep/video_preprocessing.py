@@ -5,13 +5,13 @@
  * @modify date 2023-02-02 16:42:42
  * @desc [description]
  */'''
-
-import sys
-sys.path.append('../../')
-from utils import readVideoFrames, writeToPickleFile
-import os
+import sys, os, cv2
+sys.path.append('../')
+from local_utils import readVideoFrames, writeToPickleFile
 import pickle as pkl 
 from retina_face import RetinaFaceWithSortTracker
+from utils_cams import make_video
+
 
 class VideoPreProcessor():
     def __init__(self, videoPath, cacheDir, faceDetectorName='retinaFace', verbose=False):
@@ -42,16 +42,34 @@ class VideoPreProcessor():
         else:
             if self.verbose:
                 print(f'extracting face tracks and saving at: {faceTracksFilePath}')
-            try self.faceDetectorName == 'retinaFace':
+            if self.faceDetectorName == 'retinaFace':
                 self.faceDetector = RetinaFaceWithSortTracker(self.videoPath, self.framesObj)
-            except:
+            else:
                 sys.exit(f'face detector {self.faceDetectorName} not implemented')
-        self.faceTracks = self.faceDetector.run()
-        writeToPickleFile(self.tracks, faceTracksFilePath) 
+            self.faceTracks = self.faceDetector.run()
+            writeToPickleFile(self.faceTracks, faceTracksFilePath) 
+
+    def visualizeFaceTracks(self):
+        for trackID, boxes in self.faceTracks.items():  
+            for box in boxes:
+                frameNo = int(round(box[0]*self.framesObj['fps']))
+                x1 = int(round(box[1]*self.framesObj['width']))
+                y1 = int(round(box[2]*self.framesObj['height']))
+                x2 = int(round(box[3]*self.framesObj['width']))
+                y2 = int(round(box[4]*self.framesObj['height']))
+                if frameNo < len(self.framesObj['frames']):
+                    cv2.rectangle(self.framesObj['frames'][frameNo], (x1, y1),\
+                        (x2, y2), color=(255, 0, 0), thickness=2)
+        videoSavePath = os.path.join(self.cacheDir, 'face_tracks_sanity_check.mp4')
+        
+        make_video(self.framesObj['frames'], self.framesObj['fps'], videoSavePath)
 
     def run(self):
         self.getVideoFrames()
-        self.getFaceTracks()   
+        self.getFaceTracks()  
+
+        ## sanity check face tracks  
+        # self.visualizeFaceTracks()
         
             
 

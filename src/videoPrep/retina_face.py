@@ -28,15 +28,14 @@ class RetinaFaceWithSortTracker():
     
     def getShotBoundaries(self):
         shotsOutputFile = os.path.join('../../', f'{self.videoName}-Scenes.csv')
-        scenedetectCmd = f'scenedetect --input {self.videoPath} --output ../../ detect-content \
-                            list-scenes'
-        subprocess.run(scenedetectCmd)
-        shots = list(csv.reader(open(shotsOutputFile, 'rb'), delimiter = ','))
+        scenedetectCmd = f'scenedetect --input {self.videoPath} --output ../../ detect-content list-scenes'
+        subprocess.call(scenedetectCmd, shell=True, stdout=None)
+        shots = list(csv.reader(open(shotsOutputFile, 'r'), delimiter = ','))
         del shots[0]
         del shots[0]
         self.shots = [[shot[0], float(shot[3]), float(shot[6])] for shot in shots]
         rmCmd = f'rm {shotsOutputFile}'
-        subprocess.run(rmCmd)
+        subprocess.call(rmCmd, shell=True, stdout=False)
     
     def initRetinaFace(self):
         weights_file = '../../Pytorch_Retinaface/weights/Resnet50_Final.pth'
@@ -125,6 +124,7 @@ class RetinaFaceWithSortTracker():
     def run(self):
         tracks = {}
         self.getShotBoundaries()
+        self.initRetinaFace()
         for shot in tqdm(self.shots, desc='extracting face tracks for each shot'):
             shotTracks = self.getFaceTracksInShot(shot)
             tracks |= shotTracks
