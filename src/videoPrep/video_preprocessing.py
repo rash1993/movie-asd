@@ -61,7 +61,6 @@ class VideoPreProcessor():
                     cv2.rectangle(self.framesObj['frames'][frameNo], (x1, y1),\
                         (x2, y2), color=(255, 0, 0), thickness=2)
         videoSavePath = os.path.join(self.cacheDir, 'face_tracks_sanity_check.mp4')
-        
         make_video(self.framesObj['frames'], self.framesObj['fps'], videoSavePath)
 
     def run(self):
