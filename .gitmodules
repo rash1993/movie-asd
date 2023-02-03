@@ -1,0 +1,9 @@
+[submodule "Pytorch_Retinaface"]
+	path = Pytorch_Retinaface
+	url = https://github.com/biubug6/Pytorch_Retinaface.git
+[submodule "sort"]
+	path = sort
+	url = https://github.com/abewley/sort.git
+[submodule "voxceleb_trainer"]
+	path = voxceleb_trainer
+	url = https://github.com/clovaai/voxceleb_trainer.git
