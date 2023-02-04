@@ -49,6 +49,9 @@ class VideoPreProcessor():
             self.faceTracks = self.faceDetector.run()
             writeToPickleFile(self.faceTracks, faceTracksFilePath) 
 
+    def getFaceTrackEmbeddings(self, faceTracksList=None):
+        
+
     def visualizeFaceTracks(self):
         for trackID, boxes in self.faceTracks.items():  
             for box in boxes:
@@ -63,10 +66,11 @@ class VideoPreProcessor():
         videoSavePath = os.path.join(self.cacheDir, 'face_tracks_sanity_check.mp4')
         make_video(self.framesObj['frames'], self.framesObj['fps'], videoSavePath)
 
+    
     def run(self):
         self.getVideoFrames()
-        self.getFaceTracks()  
-
+        self.getFaceTracks()
+          
         ## sanity check face tracks  
         # self.visualizeFaceTracks()
         
