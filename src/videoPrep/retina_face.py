@@ -7,18 +7,18 @@
 '''
 import sys
 sys.path.append('../../Pytorch_Retinaface')
-sys.path.append('../../sort')
+# sys.path.append('../../sort')
 import subprocess, csv, os, torch
 import numpy as np
-from sort import Sort
+from sort.sort import Sort
 from data import cfg_re50
-from layers.functions.prior_box import PriorBox
-from utils.nms.py_cpu_nms import py_cpu_nms
-from models.retinaface import RetinaFace
-from utils.box_utils import decode, decode_landm
+from Pytorch_Retinaface.layers.functions.prior_box import PriorBox
+from Pytorch_Retinaface.utils.nms.py_cpu_nms import py_cpu_nms
+from Pytorch_Retinaface.models.retinaface import RetinaFace
+from Pytorch_Retinaface.utils.box_utils import decode, decode_landm
 import pickle as pkl 
 from tqdm import tqdm
-from detect import load_model
+from Pytorch_Retinaface.detect import load_model
 
 class RetinaFaceWithSortTracker():
     def __init__(self, videoPath, framesObj):

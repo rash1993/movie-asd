@@ -7,10 +7,12 @@
  */'''
 import sys, os, cv2
 sys.path.append('../')
+sys.path.append('../../')
 from local_utils import readVideoFrames, writeToPickleFile
 import pickle as pkl 
 from retina_face import RetinaFaceWithSortTracker
 from utils_cams import make_video
+from vggFace2_embeddings import VggFace2Embeddings
 
 
 class VideoPreProcessor():
@@ -48,10 +50,26 @@ class VideoPreProcessor():
                 sys.exit(f'face detector {self.faceDetectorName} not implemented')
             self.faceTracks = self.faceDetector.run()
             writeToPickleFile(self.faceTracks, faceTracksFilePath) 
-
-    def getFaceTrackEmbeddings(self, faceTracksList=None):
         
-
+    def getFaceTrackEmbeddings(self, embeddings='vggface2', faceTracksListName='all'):
+        if faceTracksListName == 'all':
+            faceTracksList = list(self.faceTracks.keys())
+        else:
+            # TODO: Implement faceTrackList relavent to ASD
+            sys.exit(f'faceTrackList {faceTracksListName} not implemented')
+        faceTracksEmbeddingsFile = os.path.join(self.cacheDir, \
+            f'face_embeddings_{embeddings}_{faceTracksListName}.pkl')
+        if os.path.isfile(faceTracksEmbeddingsFile):
+            if self.verbose:
+                print('reading face track embeddings from cache dir')
+            self.faceTrackFeats = pkl.load(open(faceTracksEmbeddingsFile, 'rb'))
+        else:
+            if self.verbose:
+                print(f'extracting face track embeddings and saving at: {faceTracksEmbeddingsFile}')
+            self.embeddingsExtracter = VggFace2Embeddings(self.framesObj, self.faceTracks)
+            self.faceTrackFeats = self.embeddingsExtracter.extractEmbeddings(faceTracksList)
+            writeToPickleFile(self.faceTrackFeats, faceTracksEmbeddingsFile)
+        
     def visualizeFaceTracks(self):
         for trackID, boxes in self.faceTracks.items():  
             for box in boxes:
@@ -70,7 +88,8 @@ class VideoPreProcessor():
     def run(self):
         self.getVideoFrames()
         self.getFaceTracks()
-          
+        self.getFaceTrackEmbeddings()
+        
         ## sanity check face tracks  
         # self.visualizeFaceTracks()
         

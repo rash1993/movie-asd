@@ -7,3 +7,6 @@
 [submodule "sort"]
 	path = sort
 	url = https://github.com/rash1993/sort.git
+[submodule "Keras_VGGFace2_ResNet50"]
+	path = Keras_VGGFace2_ResNet50
+	url = https://github.com/rash1993/Keras_VGGFace2_ResNet50.git
