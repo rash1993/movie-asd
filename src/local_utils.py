@@ -6,8 +6,7 @@
  * @desc [description]
  */'''
  
-import cv2
-import tqdm
+import cv2, subprocess, os, csv
 import pickle as pkl
 from tqdm import tqdm 
 
@@ -60,3 +59,17 @@ def writeToPickleFile(obj, filePath):
     with open(filePath, 'wb') as f:
         pkl.dump(obj, f, protocol=pkl.HIGHEST_PROTOCOL)
     return
+
+def shotDetect(videoPath, saveDir):
+    videoName = os.path.basename(videoPath)[:-4]
+    shotsOutputFile = os.path.join(f'{saveDir}', f'{videoName}-Scenes.csv')
+    scenedetectCmd = f'scenedetect --input {videoPath} \
+                    --output {saveDir} detect-content list-scenes'
+    subprocess.call(scenedetectCmd, shell=True, stdout=None)
+    shots = list(csv.reader(open(shotsOutputFile, 'r'), delimiter = ','))
+    del shots[0]
+    del shots[0]
+    shots = [[shot[0], float(shot[3]), float(shot[6])] for shot in shots]
+    rmCmd = f'rm {shotsOutputFile}'
+    subprocess.call(rmCmd, shell=True, stdout=False)
+    return shots
