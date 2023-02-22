@@ -31,7 +31,7 @@ class AudioPreProcessor():
                 print(f'extracting the wav file and saving at: {self.wavPath}')
             wavCmd = f'ffmpeg -y -nostdin -loglevel error -y -i {self.videoPath} \
                 -ar 16k -ac 1 {self.wavPath}'
-            subprocess.run(wavCmd, shell=True, stdout=False)
+            subprocess.call(wavCmd, shell=True, stdout=False)
     
     def getVoiceAvtivity(self, VAD='pyannote'):
         if VAD == 'pyannote':
@@ -49,7 +49,7 @@ class AudioPreProcessor():
         Returns:
             segments (list):[segment_id, start_time, end_time]
         """
-        shots = shotDetect(self.videoPath, './')
+        shots = shotDetect(self.videoPath, self.cacheDir)
         segments = {}
         for shot in shots:
             shotId, shot_st, shot_et = shot

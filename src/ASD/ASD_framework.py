@@ -29,19 +29,32 @@ class ASD():
         self.guides = guides
         self.verbose = verbose
         self.similarity = Similarity(measure='correlation')
-        self.distanaces = Distances(faceFeatures, speechFeatures, \
+        self.distances = Distances(faceFeatures, speechFeatures, \
             self.cacheDir, verbose=self.verbose)
+
+    def offscreenSpeakercorrection(self, th=0.2):
+        speechKeys = list(self.asd.keys())
+        audioDistances = self.distances.computeDistanceMatrix(\
+                                    speechKeys, modality='speech')
+        faceDistances = self.distances.computeDistanceMatrix(\
+                                    speechKeys, asd=self.asd, modality='face')
+        corr = self.similarity.computeAvgSimilarity(\
+                                    audioDistances, faceDistances, avg=False)
+        offScreenSpeechKeys = [key_ for key_, corr_ in zip(speechKeys, corr) if corr_ < th]
+        self.asd = {key:self.asd[key] for key in self.asd.keys() if key not in offScreenSpeechKeys}
+        
 
 
     def run(self, partitionLen='full'):
         speechFaceAssociation = SpeechFaceAssociation(self.cacheDir,\
                                                       self.speechFaceTracks,\
                                                       self.similarity,\
-                                                      self.distanaces,\
+                                                      self.distances,\
                                                       self.faceTracks,\
                                                       self.guides,\
                                                       self.verbose)
         self.asd = speechFaceAssociation.handler(partitionLen)
+        self.offscreenSpeakercorrection()
         asdSaveFile = os.path.join(self.cacheDir, 'asd.pkl')
         writeToPickleFile(self.asd, asdSaveFile)
     
@@ -53,6 +66,9 @@ class ASD():
             framesObj = readVideoFrames(videoPath)
 
         frames = framesObj['frames']
+        for i,frame in enumerate(frames):
+            frames[i] = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
         for _, faceTrack in self.faceTracks.items():
             for box in faceTrack:
                 frameNo = int(round(box[0]*framesObj['fps']))

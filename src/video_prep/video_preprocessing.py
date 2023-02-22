@@ -45,7 +45,8 @@ class VideoPreProcessor():
             if self.verbose:
                 print(f'extracting face tracks and saving at: {faceTracksFilePath}')
             if self.faceDetectorName == 'retinaFace':
-                self.faceDetector = RetinaFaceWithSortTracker(self.videoPath, self.framesObj)
+                self.faceDetector = RetinaFaceWithSortTracker(self.videoPath, \
+                                        self.cacheDir, self.framesObj)
             else:
                 sys.exit(f'face detector {self.faceDetectorName} not implemented')
             self.faceTracks = self.faceDetector.run()

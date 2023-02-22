@@ -22,10 +22,11 @@ from Pytorch_Retinaface.detect import load_model
 from local_utils import shotDetect
 
 class RetinaFaceWithSortTracker():
-    def __init__(self, videoPath, framesObj):
+    def __init__(self, videoPath, cacheDir, framesObj):
         self.videoPath = videoPath
         self.videoName = os.path.basename(videoPath)[:-4]
         self.framesObj = framesObj
+        self.cacheDir = cacheDir
     
     def initRetinaFace(self):
         weights_file = '../Pytorch_Retinaface/weights/Resnet50_Final.pth'
@@ -113,7 +114,7 @@ class RetinaFaceWithSortTracker():
 
     def run(self):
         tracks = {}
-        self.shots = shotDetect(self.videoPath, './')
+        self.shots = shotDetect(self.videoPath,self.cacheDir)
         self.initRetinaFace()
         for shot in tqdm(self.shots, desc='extracting face tracks for each shot'):
             shotTracks = self.getFaceTracksInShot(shot)

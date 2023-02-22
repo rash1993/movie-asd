@@ -63,13 +63,12 @@ def writeToPickleFile(obj, filePath):
 def shotDetect(videoPath, saveDir):
     videoName = os.path.basename(videoPath)[:-4]
     shotsOutputFile = os.path.join(f'{saveDir}', f'{videoName}-Scenes.csv')
-    scenedetectCmd = f'scenedetect --input {videoPath} \
-                    --output {saveDir} detect-content list-scenes'
-    subprocess.call(scenedetectCmd, shell=True, stdout=None)
+    if not os.path.isfile(shotsOutputFile):
+        scenedetectCmd = f'scenedetect --input {videoPath} \
+                        --output {saveDir} detect-content list-scenes'
+        subprocess.call(scenedetectCmd, shell=True, stdout=None)
     shots = list(csv.reader(open(shotsOutputFile, 'r'), delimiter = ','))
     del shots[0]
     del shots[0]
     shots = [[shot[0], float(shot[3]), float(shot[6])] for shot in shots]
-    rmCmd = f'rm {shotsOutputFile}'
-    subprocess.call(rmCmd, shell=True, stdout=False)
     return shots
