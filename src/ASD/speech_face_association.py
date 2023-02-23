@@ -122,7 +122,7 @@ class SpeechFaceAssociation():
             if self.verbose:
                 print(f'epoch: {epoch} | corr: {currentCorr}')
             for i, keyi in enumerate(tqdm(speechKeys, \
-                desc='optimizing epoch {epoch} of partition {partitionId}')):
+                desc=f'optimizing epoch {epoch}')):
                 if keyi in posGuides:
                     continue
                 faceTracks = self.speechFaceTracks[keyi]['face_tracks']

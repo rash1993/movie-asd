@@ -7,6 +7,7 @@
  */'''
 import os, subprocess, sys
 from audio_prep.pyannote_VAD import VoiceActivityDetector as pyannoteVAD
+from audio_prep.pyannote_VAD import SpeakerHomogeneousSpeechSegmentation as pyannoteSCD
 from local_utils import shotDetect
 from scipy.io import wavfile
 from audio_prep.resnet_clovaAI import SpeakerRecognition
@@ -38,6 +39,11 @@ class AudioPreProcessor():
             self.vad = pyannoteVAD(self.wavPath).run()
         else:
             sys.exit(f'VAD system {VAD} not implemented')
+
+    def getSpeakerHomogeneousSegmentsPyannote(self):
+        scd = pyannoteSCD(self.wavPath).run()
+        self.speakerHomoSegments = [[f'{i}'] + segment_ for i, segment_ in enumerate(scd)]
+
 
     def getSpeakerHomogeneousSegments(self, maxth=1.0):
         """method to generate speaker homogeneous speech segments. Using a proxy that segments 
@@ -128,6 +134,7 @@ class AudioPreProcessor():
     
     def run(self):
         self.getAudioWav()
-        self.getVoiceAvtivity()
-        self.getSpeakerHomogeneousSegments()
+        # self.getVoiceAvtivity()
+        # self.getSpeakerHomogeneousSegments()
+        self.getSpeakerHomogeneousSegmentsPyannote()
         self.extractSpeechEmbeddings()

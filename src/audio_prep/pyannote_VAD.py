@@ -6,8 +6,10 @@
  * @desc [description]
  */'''
 
-from pyannote.audio import Model
+from pyannote.audio import Model, Inference
 from pyannote.audio.pipelines import VoiceActivityDetection
+from pyannote.audio.utils.signal import Binarize
+from pyannote.audio.utils.signal import Peak
 import numpy as np
 from scipy.io import wavfile
 
@@ -39,3 +41,27 @@ class VoiceActivityDetector():
         vad.sort(key=lambda x: x[0])
         vad = np.array(vad)
         return vad
+
+class SpeakerHomogeneousSpeechSegmentation():
+    def __init__(self, wavPath, auth='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'):
+        self.wavPath = wavPath
+        self.auth = auth
+    
+    def run(self):
+        BATCH_AXIS = 0
+        TIME_AXIS = 1
+        SPEAKER_AXIS = 2
+        to_vad = lambda o: np.max(o, axis=SPEAKER_AXIS, keepdims=True)
+        vad = Inference("pyannote/segmentation", pre_aggregation_hook=to_vad,\
+                        use_auth_token=self.auth)
+        vad_prob = vad(self.wavPath)
+        binarize = Binarize(onset=0.5)
+        speech = binarize(vad_prob)
+        to_scd = lambda probability: np.max(np.abs(np.diff(probability, n=1, axis=TIME_AXIS)), \
+            axis=SPEAKER_AXIS, keepdims=True)
+        scd = Inference("pyannote/segmentation", pre_aggregation_hook=to_scd, use_auth_token=self.auth)
+        scd_prob = scd(self.wavPath)
+        peak = Peak(alpha=0.05)
+        scd = peak(scd_prob).crop(speech.get_timeline())
+        scd = [[d.start, d.end] for d in scd]
+        return scd
