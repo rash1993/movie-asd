@@ -134,7 +134,7 @@ class AudioPreProcessor():
     
     def run(self):
         self.getAudioWav()
-        # self.getVoiceAvtivity()
-        # self.getSpeakerHomogeneousSegments()
-        self.getSpeakerHomogeneousSegmentsPyannote()
+        self.getVoiceAvtivity()
+        self.getSpeakerHomogeneousSegments()
+        # self.getSpeakerHomogeneousSegmentsPyannote()
         self.extractSpeechEmbeddings()
