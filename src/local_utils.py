@@ -10,7 +10,7 @@ import cv2, subprocess, os, csv
 import pickle as pkl
 from tqdm import tqdm 
 
-def readVideoFrames(videoPath, res=None):
+def readVideoFrames(videoPath, fps=6, res=None):
     """method to read all the frames of a video file.
        Video must be in format supported by opencv.
 
@@ -27,7 +27,7 @@ def readVideoFrames(videoPath, res=None):
     """
 
     vid = cv2.VideoCapture(videoPath)
-    fps = vid.get(cv2.CAP_PROP_FPS)
+    FPS = vid.get(cv2.CAP_PROP_FPS)
     framesCount = vid.get(cv2.CAP_PROP_FRAME_COUNT)
     if res:
         frameHeight, frameWidth = res
@@ -38,13 +38,15 @@ def readVideoFrames(videoPath, res=None):
     flag = True
 
     pbar = tqdm(total=framesCount, desc='reading video frames')
+    frame_counter = 0
     while flag:
         flag, img = vid.read()
         if flag:
             if res:
                 img = cv2.resize(img, (frameWidth, frameHeight))
-            frames.append(img)
+            frames.append({'time':round(float(frame_counter/fps),3) , 'frame':img})
             pbar.update(1)
+            frame_counter += 1
     pbar.close()
     
     return {'frames':frames, 'height':frameHeight, 'width':frameWidth, 'fps':fps}
