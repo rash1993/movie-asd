@@ -1,7 +1,7 @@
 import numpy as np
 from sort.sort import Sort
 
-class Tracker:
+class SortTracker:
     def __init__(self, prefix='default'):
         self.tracker = Sort()
         self.track_name_prefix = prefix
@@ -19,4 +19,5 @@ class Tracker:
                     tracks[track_id].append(bbox)
                 else:
                     tracks[track_id] = [bbox]
+        print(tracks.keys())
         return tracks

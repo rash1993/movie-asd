@@ -19,7 +19,7 @@ def timeCode2seconds(time_code):
     Returns:
         seconds: time in seconds
     """
-    time_code = time_code.split(':')
+    time_code = [float(t) for t in time_code.split(':')]
     seconds = int(time_code[0]) * 3600 + int(time_code[1]) * 60 + int(time_code[2])
     return seconds
 

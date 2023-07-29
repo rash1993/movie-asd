@@ -9,7 +9,7 @@
 from src.local_utils import readVideoFrames, writeToPickleFile, timeCode2seconds
 from src.video_prep.deep_face_detector import FaceDetector
 from src.video_prep.sort_tracker import SortTracker
-from scenedetect import detect, AdaptiveDetector
+from scenedetect import detect, AdaptiveDetector, ContentDetector
 import pickle as pkl 
 import sys, os, cv2
 import numpy as np
@@ -63,7 +63,7 @@ class VideoPreProcessor():
         if os.path.isfile(faceTracksFilePath) and cache:
             if self.verbose:
                 print('reading face tracks from cache')
-            self.faceTracks = pkl.load(open(faceTracksFilePath, 'rb'))
+            face_tracks = pkl.load(open(faceTracksFilePath, 'rb'))
         else:
             if self.verbose:
                 print(f'extracting face tracks and saving at: {faceTracksFilePath}')
@@ -71,21 +71,24 @@ class VideoPreProcessor():
             faces =  self.getFaces(framesObj, cache=cache)
 
             # getshots
-            scenes = detect(self.videoPath, AdaptiveDetector())
+            scenes = detect(self.videoPath, ContentDetector())
             scenes = [[timeCode2seconds(scene[0].get_timecode()),  \
                        timeCode2seconds(scene[1].get_timecode())] for scene in scenes]
             
             # get_face_tracks
             face_tracks = {}
+            # face_tracks = SortTracker().track(faces)
             for i, scene in tqdm(enumerate(scenes), desc='extracting face tracks'):
                 tracks_prefix = str(i)
                 start_time, end_time = scene
-                start_frame = int(np.ceil(start_time * framesObj['fps']))
-                end_frame = int(np.floor(end_time * framesObj['fps']))
+                start_frame = int(np.floor(start_time * framesObj['fps']))
+                end_frame = int(np.ceil(end_time * framesObj['fps']))
                 if start_frame == end_frame:
                     continue
                 dets_scene =  faces[start_frame:end_frame]
-                face_tracks |= SortTracker(tracks_prefix).track(dets_scene)
+                face_tracks.update(SortTracker(tracks_prefix).track(dets_scene))
+            # filter face tracks to remove short tracks > 0.2sec
+            face_tracks = {track_id: track for track_id, track in face_tracks.items() if len(track) > 0.2 * framesObj['fps']}
             if cache:
                 writeToPickleFile(face_tracks, faceTracksFilePath)
         return face_tracks
@@ -110,34 +113,36 @@ class VideoPreProcessor():
     #     video_writer.release()
     #     print(f'face tracks sanity check video saved at: {videoSavePath}')
 
-    # def visualizeFaceTracks(self, framesObj, faces, facetracks):
-    #     '''
-    #     method to visualize face tracks on the video
+    def visualizeFaceTracks(self, framesObj, facetracks):
+        '''
+        method to visualize face tracks on the video
         
-    #     Args:
-    #         framesObj (dict): dictionary containing video frames and fps
-    #         faces (list): list of faces detected in each frame
-    #         facetracks (dict): dictionary containing face tracks
-    #     '''
-    #     x_scale = framesObj['width']
-    #     y_scale = framesObj['height']
-    #     for frameNo, boxes in enumerate(faces):
-    #         for box in boxes:
-    #             x1 = int(round(box[0]*x_scale))
-    #             y1 = int(round(box[1]*y_scale))
-    #             x2 = int(round(box[2]*x_scale))
-    #             y2 = int(round(box[3]*y_scale))
-    #             cv2.rectangle(framesObj['frames'][frameNo], (x1, y1),\
-    #                     (x2, y2), color=(255, 0, 0), thickness=2)
-    #     for track_id, track in facetracks.items():
-    #         for frameNo, box in enumerate(track):
-    #             x1 = int(round(box[1]*x_scale))
-    #             y1 = int(round(box[2]*y_scale))
-    #             x2 = int(round(box[3]*x_scale))
-    #             y2 = int(round(box[4]*y_scale))
-    #             cv2.rectangle(framesObj['frames'][frameNo], (x1, y1),\
-    #                     (x2, y2), color=(0, 255, 0), thickness=2)
-    #     videoSavePath = os.path.join(self.cacheDir, 'face_tracks_sanity_check.mp4')
+        Args:
+            framesObj (dict): dictionary containing video frames and fps
+            faces (list): list of faces detected in each frame
+            facetracks (dict): dictionary containing face tracks
+        '''
+        x_scale = framesObj['width']
+        y_scale = framesObj['height']
+        frames = framesObj['frames']
+        for track_id, track in facetracks.items():
+            for box in track:
+                x1 = int(round(box[1]*x_scale))
+                y1 = int(round(box[2]*y_scale))
+                x2 = int(round(box[3]*x_scale))
+                y2 = int(round(box[4]*y_scale))
+                frame_no = int(round(box[0]*framesObj['fps']))
+                cv2.rectangle(frames[frame_no], (x1, y1),\
+                        (x2, y2), color=(255, 0, 0), thickness=2)
+                cv2.putText(frames[frame_no], str(track_id), (x1, y1),\
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        videoSavePath = os.path.join(self.cacheDir, 'face_tracks_sanity_check.mp4')
+        video_writer = cv2.VideoWriter(videoSavePath, cv2.VideoWriter_fourcc(*'mp4v'), \
+            framesObj['fps'], (framesObj['width'], framesObj['height']))
+        for frame in framesObj['frames']:
+            video_writer.write(frame)
+        video_writer.release()
+        print(f'face tracks sanity check video saved at: {videoSavePath}')
 
     def run(self):
         framesObj = self.getVideoFrames(fps=6)
@@ -147,7 +152,7 @@ class VideoPreProcessor():
         # self.getFaceTrackEmbeddings()
         
         ## sanity check face tracks  
-        # self.visualizeFaceTracks(framesObj, faces)
+        self.visualizeFaceTracks(framesObj, face_tracks)
     
 if __name__ == "__main__":
     video_path = '/home/azureuser/cloudfiles/code/tsample3.mp4'

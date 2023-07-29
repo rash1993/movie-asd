@@ -1,10 +1,6 @@
 from deepface import DeepFace
-from collections import defaultdict
 from tqdm import tqdm
 
-def dd():
-    return []
-    
 class FaceDetector:
     def __init__(self, backend='retinaface'):
         self.backend = backend
@@ -18,8 +14,7 @@ class FaceDetector:
                                                  detector_backend=self.backend)
             boxes = []
             for bbox in frame_faces:
-                bbox = bbox['facial_area'] + [bbox['confidence']]
-                bbox = list(bbox.values())
+                bbox = list(bbox['facial_area'].values()) + [bbox['confidence']]
                 # of format (x1, y1, x2, y2)
                 bbox = [bbox[0]/x_scale, \
                         bbox[1]/y_scale, \
