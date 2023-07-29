@@ -10,7 +10,7 @@ import cv2, subprocess, os, csv
 import pickle as pkl
 from tqdm import tqdm 
 
-def readVideoFrames(videoPath, fps=6, res=None):
+def readVideoFrames(video_path, fps=6, res=None):
     """method to read all the frames of a video file.
        Video must be in format supported by opencv.
 
@@ -26,30 +26,34 @@ def readVideoFrames(videoPath, fps=6, res=None):
         fps: frame rate of the video file
     """
 
-    vid = cv2.VideoCapture(videoPath)
-    FPS = vid.get(cv2.CAP_PROP_FPS)
-    framesCount = vid.get(cv2.CAP_PROP_FRAME_COUNT)
+    vid = cv2.VideoCapture(video_path)
+    original_framerate = vid.get(cv2.CAP_PROP_FPS)
+    if fps < 0: 
+        fps = original_framerate
+    frame_skip = int(round(original_framerate / fps))
+    total_frames = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
     if res:
         frameHeight, frameWidth = res
     else:
         frameHeight = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
         frameWidth = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
-    frames = []
-    flag = True
-
-    pbar = tqdm(total=framesCount, desc='reading video frames')
+    pbar = tqdm(total=total_frames)
     frame_counter = 0
-    while flag:
-        flag, img = vid.read()
-        if flag:
-            if res:
-                img = cv2.resize(img, (frameWidth, frameHeight))
-            frames.append({'time':round(float(frame_counter/fps),3) , 'frame':img})
-            pbar.update(1)
+    frames = []
+    while vid.isOpened():
+        ret, img = vid.read()
+        if not ret:
+            break
+        if res:
+            img = cv2.resize(img, (frameWidth, frameHeight))
+        frames.append(img)
+        frame_counter += 1
+        for _ in range(frame_skip - 1):
+            vid.grab()
             frame_counter += 1
-    pbar.close()
-    
-    return {'frames':frames, 'height':frameHeight, 'width':frameWidth, 'fps':fps}
+        pbar.update(frame_skip)
+    vid.release()
+    return {'frames':frames, 'height':int(frameHeight), 'width':int(frameWidth), 'fps':fps}
 
 def writeToPickleFile(obj, filePath):
     """method tp save an object in pickle format
