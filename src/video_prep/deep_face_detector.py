@@ -18,13 +18,14 @@ class FaceDetector:
                                                  detector_backend=self.backend)
             boxes = []
             for bbox in frame_faces:
-                bbox = bbox['facial_area']
+                bbox = bbox['facial_area'] + [bbox['confidence']]
                 bbox = list(bbox.values())
                 # of format (x1, y1, x2, y2)
                 bbox = [bbox[0]/x_scale, \
                         bbox[1]/y_scale, \
                         (bbox[0] + bbox[2])/x_scale, \
-                        (bbox[1] + bbox[3])/y_scale]
+                        (bbox[1] + bbox[3])/y_scale, \
+                        bbox[4]]
                 boxes.append(bbox)
             faces_out.append(boxes)
         return faces_out

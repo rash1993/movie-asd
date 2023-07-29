@@ -10,6 +10,19 @@ import cv2, subprocess, os, csv
 import pickle as pkl
 from tqdm import tqdm 
 
+def timeCode2seconds(time_code):
+    """method to convert time code to seconds
+
+    Args:
+        time_code (string): time code in the format hh:mm:ss
+
+    Returns:
+        seconds: time in seconds
+    """
+    time_code = time_code.split(':')
+    seconds = int(time_code[0]) * 3600 + int(time_code[1]) * 60 + int(time_code[2])
+    return seconds
+
 def readVideoFrames(video_path, fps=6, res=None):
     """method to read all the frames of a video file.
        Video must be in format supported by opencv.
