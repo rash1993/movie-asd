@@ -20,7 +20,7 @@ def timeCode2seconds(time_code):
         seconds: time in seconds
     """
     time_code = [float(t) for t in time_code.split(':')]
-    seconds = int(time_code[0]) * 3600 + int(time_code[1]) * 60 + int(time_code[2])
+    seconds = int(time_code[0]) * 3600 + int(time_code[1]) * 60 + float(time_code[2])
     return seconds
 
 def readVideoFrames(video_path, fps=6, res=None):
@@ -91,3 +91,55 @@ def shotDetect(videoPath, saveDir):
     del shots[0]
     shots = [[shot[0], float(shot[3]), float(shot[6])] for shot in shots]
     return shots
+
+def split_face_tracks(face_tracks, scenes):
+    '''
+    split the faces tracks at the scene boundaries
+
+    Args:
+        face_tracks (list): list of face tracks
+        scenes (list): list of scenes
+    '''
+    def get_start_end_time(face_track):
+        return face_track[0][0], face_track[-1][0]
+    
+    face_tracks_keys = list(face_tracks.keys())
+    face_tracks_keys.sort( key=lambda x: face_tracks[x][0][0])
+
+    LEN_SCENES = len(scenes)
+    while len(scenes):
+        scene_idx = LEN_SCENES - len(scenes)
+        curr_scene = scenes.pop(0)
+        print(scene_idx)
+        while len(face_tracks_keys):
+            face_track_key = face_tracks_keys.pop(0)
+            face_track = face_tracks[face_track_key]
+            start_time, end_time = get_start_end_time(face_track)
+            print(start_time, end_time, curr_scene)
+            if start_time >= curr_scene[1]:
+                break
+            if end_time <= curr_scene[1]:
+                # change the face track id by appending the scene id
+                face_tracks[f'{scene_idx}_{face_track_key}'] = face_tracks[face_track_key]
+                del face_tracks[face_track_key]
+                continue
+                # split the face track
+            else:
+                curr_scene_track = []
+                next_scene_track = []
+                for face in face_track:
+                    if face[0] < curr_scene[1]:
+                        curr_scene_track.append(face)
+                    else:
+                        next_scene_track.append(face)
+                face_tracks[f'{scene_idx}_{face_track_key}'] = curr_scene_track
+                face_tracks[face_track_key] = next_scene_track
+                face_tracks_keys.insert(0, face_track_key)
+
+    return face_tracks
+            
+
+
+        
+    
+        

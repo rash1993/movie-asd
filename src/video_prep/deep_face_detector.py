@@ -11,7 +11,7 @@ class FaceDetector:
         faces_out = []
         for frame in tqdm(frames, desc='extracting faces'):
             frame_faces = DeepFace.extract_faces(img_path = frame, \
-                                                 detector_backend=self.backend)
+                                                 detector_backend=self.backend, enforce_detection=False)
             boxes = []
             for bbox in frame_faces:
                 bbox = list(bbox['facial_area'].values()) + [bbox['confidence']]
@@ -24,4 +24,3 @@ class FaceDetector:
                 boxes.append(bbox)
             faces_out.append(boxes)
         return faces_out
-

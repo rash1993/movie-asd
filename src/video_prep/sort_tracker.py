@@ -19,5 +19,4 @@ class SortTracker:
                     tracks[track_id].append(bbox)
                 else:
                     tracks[track_id] = [bbox]
-        print(tracks.keys())
         return tracks
