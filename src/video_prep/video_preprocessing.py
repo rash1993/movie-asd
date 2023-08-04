@@ -11,7 +11,7 @@ from src.video_prep.deep_face_detector import FaceDetector
 from src.video_prep.sort_tracker import SortTracker
 from scenedetect import detect, AdaptiveDetector, ContentDetector
 import pickle as pkl 
-import sys, os, cv2
+import sys, os, cv2, csv
 import numpy as np
 from tqdm import tqdm
 from deepface import DeepFace
@@ -77,6 +77,10 @@ class VideoPreProcessor():
             scenes = detect(self.videoPath, ContentDetector())
             scenes = [[timeCode2seconds(scene[0].get_timecode()),  \
                        timeCode2seconds(scene[1].get_timecode())] for scene in scenes]
+            with open(os.path.join(self.cacheDir, 'scenes.csv'), 'w') as f:
+                csv_writer = csv.writer(f)
+                for line in scenes:
+                    csv_writer.writerow(line)
             # get_face_tracks
             face_tracks = {}
             for scene_idx, scene in enumerate(scenes):
@@ -164,11 +168,12 @@ class VideoPreProcessor():
     def run(self):
         framesObj = self.getVideoFrames(fps=-1)
         face_tracks = self.getFaceTracks(framesObj)
-        # self.getFaceTracks()
-        face_track_embesddings =  self.getFaceTrackEmbeddings(framesObj, face_tracks)
-        
+        face_track_embeddings =  self.getFaceTrackEmbeddings(framesObj, face_tracks)
+        for track_id, track in face_tracks.items():
+            face_track_embeddings[track_id] = {'track': track, 'embedding': face_track_embeddings[track_id]}
         ## sanity check face tracks  
-        self.visualizeFaceTracks(framesObj, face_tracks)
+        # self.visualizeFaceTracks(framesObj, face_tracks)
+        return face_track_embeddings
     
 if __name__ == "__main__":
     video_path = '/home/azureuser/cloudfiles/code/tsample3.mp4'
