@@ -21,18 +21,17 @@ if __name__ == '__main__':
     cacheDir = os.path.join(args.cacheDir, videoName)
     os.makedirs(cacheDir, exist_ok=True)
 
-    preprocessor = Preprocessor(args.videoPath,\
-                                cacheDir=cacheDir,\
-                                verbose=args.verbose)
-    preprocessor.prep()
+    speechFaceTracks, faceTrackEmbeddings, speechEmbeddings = Preprocessor(args.videoPath,\
+                                                                           cacheDir=cacheDir,\
+                                                                           verbose=args.verbose).prep()
 
-    asdFramework = ASD(preprocessor.speechFaceTracks,\
-                       preprocessor.videoPrep.faceTracks,\
-                       preprocessor.videoPrep.faceTrackFeats,\
-                       preprocessor.audioPrep.speechEmbeddings,\
-                       cacheDir, guides=None, verbose=args.verbose)
-    asdFramework.run()
-    asdFramework.visualizeASD(args.videoPath)
+    # asdFramework = ASD(preprocessor.speechFaceTracks,\
+    #                    preprocessor.videoPrep.faceTracks,\
+    #                    preprocessor.videoPrep.faceTrackFeats,\
+    #                    preprocessor.audioPrep.speechEmbeddings,\
+    #                    cacheDir, guides=None, verbose=args.verbose)
+    # asdFramework.run()
+    # asdFramework.visualizeASD(args.videoPath)
 
 
 

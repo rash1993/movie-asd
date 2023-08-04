@@ -75,20 +75,15 @@ class Preprocessor():
             if len(overlappingFaceTracks):
                 segmentsOut[segmentId] = {'speech': segment, 'face_tracks': overlappingFaceTracks}
                 segmentsCounter += 1
-        self.speechFaceTracks = segmentsOut
         speechFaceTracksFile = os.path.join(self.cacheDir, 'speechFaceTracks.pkl')
-        writeToPickleFile(self.speechFaceTracks, speechFaceTracksFile)
+        writeToPickleFile(segmentsOut, speechFaceTracksFile)
+        return segmentsOut
 
     def prep(self):
-        self.audioPrep.run()
-        self.videoPrep.run()
-        self.getTemporallyOverlappingFaceTracks(self.videoPrep.faceTracks,\
-             self.audioPrep.speakerHomoSegments)
-        
-        
-
-
-        
-
-        
+        speechEmbeddings = self.audioPrep.run()
+        faceTrackEmbeddings = self.videoPrep.run()
+        faceTracks = {track_id: faceTrack['track'] for track_id, faceTrack in faceTrackEmbeddings.items()}
+        speechSegments = [[segment_id] + segment['segment'] for segment_id, segment in speechEmbeddings.items()]
+        speechFaceTracks = self.getTemporallyOverlappingFaceTracks(faceTracks, speechSegments)
+        return speechFaceTracks, faceTrackEmbeddings, speechEmbeddings
 
