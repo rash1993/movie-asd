@@ -16,21 +16,10 @@ from utils_cams import make_video
 
 
 class ASD():
-    def __init__(self, 
-                speechFaceTracks, 
-                faceTracks, 
-                faceFeatures, 
-                speechFeatures, cacheDir, guides=None, verbose=False):
-        self.speechFaceTracks = speechFaceTracks
-        self.faceTracks = faceTracks
-        self.faceFeatures = faceFeatures
-        self.speechFeatures = speechFeatures
-        self.cacheDir = cacheDir
-        self.guides = guides
+    def __init__(self, cache_dir, similarity_mesaure='correlation', verbose=False):
+        self.cacheDir = cache_dir
+        self.similarity = Similarity(measure=similarity_mesaure)
         self.verbose = verbose
-        self.similarity = Similarity(measure='correlation')
-        self.distances = Distances(faceFeatures, speechFeatures, \
-            self.cacheDir, verbose=self.verbose)
 
     def offscreenSpeakercorrection(self, th=0.2):
         speechKeys = list(self.asd.keys())
@@ -45,13 +34,19 @@ class ASD():
         
 
 
-    def run(self, partitionLen='full'):
+    def run(self, speechFaceTracks, 
+            faceTrackEmbeddings, 
+            speechEmbeddings,
+            guides=None, 
+            partitionLen='full'):
+        self.distances = Distances(faceTrackEmbeddings, speechEmbeddings, self.cacheDir, self.verbose)
+        self.faceTracks = {track_id: track['track'] for track_id, track in faceTrackEmbeddings.items()}
         speechFaceAssociation = SpeechFaceAssociation(self.cacheDir,\
-                                                      self.speechFaceTracks,\
+                                                      speechFaceTracks,\
                                                       self.similarity,\
                                                       self.distances,\
                                                       self.faceTracks,\
-                                                      self.guides,\
+                                                      guides,\
                                                       self.verbose)
         self.asd = speechFaceAssociation.handler(partitionLen)
         self.offscreenSpeakercorrection()

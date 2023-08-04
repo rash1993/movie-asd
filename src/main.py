@@ -25,6 +25,8 @@ if __name__ == '__main__':
                                                                            cacheDir=cacheDir,\
                                                                            verbose=args.verbose).prep()
 
+    asdFramework = ASD(cacheDir, verbose=args.verbose)
+    asdFramework.run(speechFaceTracks, faceTrackEmbeddings, speechEmbeddings)
     # asdFramework = ASD(preprocessor.speechFaceTracks,\
     #                    preprocessor.videoPrep.faceTracks,\
     #                    preprocessor.videoPrep.faceTrackFeats,\

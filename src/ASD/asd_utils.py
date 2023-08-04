@@ -15,10 +15,12 @@ import pickle as pkl
 from tqdm import tqdm
 
 class Distances():
-    def __init__(self, faceFeatures, speechFeatures, cacheDir, verbose=False):
+    def __init__(self, faceTrackEmbeddings, speechEmbeddings, cacheDir, verbose=False):
         self.cacheDir = cacheDir
-        self.faceFeatures = faceFeatures
-        self.speechFeatures = speechFeatures
+        self.faceFeatures = {track_id: track['embeddings'] for \
+                             track_id, track in faceTrackEmbeddings.item()}
+        self.speechFeatures = {segment_id: segment['embeddings'] for \
+                               segment_id, segment in speechEmbeddings.items()}
         self.verbose = verbose
         self.computeFaceTrackDistancesAll()
 
