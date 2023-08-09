@@ -7,10 +7,11 @@
  */'''
 import os, subprocess, sys, torch
 from src.audio_prep.vad import VoiceActivityDetector as VAD
-from src.local_utils import writeToPickleFile, timeCode2seconds
+from src.local_utils import writeToPickleFile, timeCode2seconds, splitWav
 from pyannote.audio.pipelines.speaker_verification import PretrainedSpeakerEmbedding
 from pyannote.audio import Audio
 from pyannote.core import Segment
+from src.audio_prep.resnet_clovaai import SpeakerRecognition
 from scenedetect import detect, AdaptiveDetector, ContentDetector
 from scipy.io import wavfile
 from tqdm import tqdm
@@ -120,7 +121,7 @@ class AudioPreProcessor():
                     et = st + 0.4
                     if et > totalDur-0.1:
                         # margin of 0.1 sec
-                        et = totalDur -0.1
+                        et = totalDur - 0.1
                         st = et - 0.4
                     segments[i] = [segment[0], st, et]
             # adding a margin of 0.1 sec if the et > totalDur
@@ -142,7 +143,9 @@ class AudioPreProcessor():
         print(wavPath)
         vad = self.getVoiceAvtivity(wavPath)
         speakerHomoSegments = self.getSpeakerHomogeneousSegments(vad)
-        speechEmbeddings = self.extractSpeechEmbeddings(wavPath, speakerHomoSegments)
+        wavDir = splitWav(wavPath, speakerHomoSegments, self.cacheDir)
+        speechEmbeddings = SpeakerRecognition().extractFeatures(wavDir)
+        # speechEmbeddings = self.extractSpeechEmbeddings(wavPath, speakerHomoSegments)
         for segment in speakerHomoSegments:
             speechEmbeddings[segment[0]] = {'segment': segment[1:], 'embedding': speechEmbeddings[segment[0]]}
         return speechEmbeddings

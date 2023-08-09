@@ -17,9 +17,9 @@ from tqdm import tqdm
 class Distances():
     def __init__(self, faceTrackEmbeddings, speechEmbeddings, cacheDir, verbose=False):
         self.cacheDir = cacheDir
-        self.faceFeatures = {track_id: track['embeddings'] for \
-                             track_id, track in faceTrackEmbeddings.item()}
-        self.speechFeatures = {segment_id: segment['embeddings'] for \
+        self.faceFeatures = {track_id: track['embedding'] for \
+                             track_id, track in faceTrackEmbeddings.items()}
+        self.speechFeatures = {segment_id: segment['embedding'] for \
                                segment_id, segment in speechEmbeddings.items()}
         self.verbose = verbose
         self.computeFaceTrackDistancesAll()

@@ -9,6 +9,10 @@
 import cv2, subprocess, os, csv
 import pickle as pkl
 from tqdm import tqdm 
+import numpy as np
+from scipy.spatial.distance import cdist
+from matplotlib import pyplot as plt
+from scipy.io import wavfile
 
 def timeCode2seconds(time_code):
     """method to convert time code to seconds
@@ -22,6 +26,18 @@ def timeCode2seconds(time_code):
     time_code = [float(t) for t in time_code.split(':')]
     seconds = int(time_code[0]) * 3600 + int(time_code[1]) * 60 + float(time_code[2])
     return seconds
+
+def cosine_dist(vector_i, vector_j):
+    """method to calculate cosine distance between two vectors
+
+    Args:
+        vector_i (numpy array): vector i
+        vector_j (numpy array): vector j
+
+    Returns:
+        cosine distance between vector i and vector j
+    """
+    return cdist(vector_i.reshape(1, -1), vector_j.reshape(1, -1), metric='cosine')[0, 0]
 
 def readVideoFrames(video_path, fps=6, res=None):
     """method to read all the frames of a video file.
@@ -50,7 +66,7 @@ def readVideoFrames(video_path, fps=6, res=None):
     else:
         frameHeight = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
         frameWidth = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
-    pbar = tqdm(total=total_frames)
+    pbar = tqdm(total=total_frames, desc='reading frames')
     frame_counter = 0
     frames = []
     while vid.isOpened():
@@ -138,8 +154,100 @@ def split_face_tracks(face_tracks, scenes):
 
     return face_tracks
             
+def visualize_asd(asd_checkpoint, cacheDir, videoPath=None,framesObj=None, fps=-1, resolution=None, faceTracks=None):
+    '''
+    visualize the asd results
+    '''
+    if framesObj is None:
+        if os.path.isfile(os.path.join(cacheDir, 'frames.pkl')):
+            framesObj = pkl.load(open(os.path.join(cacheDir, 'frames.pkl'), 'rb'))
+        else:
+            framesObj = readVideoFrames(videoPath, fps=fps, res=resolution)
+    frames = framesObj['frames']
 
+    '''
+    visualize the face tracks if provided
+    '''
+    if faceTracks is not None:
+        for faceTrackId, face_track in faceTracks.items():
+            for face in face_track:
+                frame_no = int(round(face[0]*framesObj['fps']))
+                x1 = int(face[1]*framesObj['width'])
+                y1 = int(face[2]*framesObj['height'])
+                x2 = int(face[3]*framesObj['width'])
+                y2 = int(face[4]*framesObj['height'])
+                cv2.rectangle(frames[frame_no], (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+    for segment_id, track in asd_checkpoint.items():
+        for face in track['track']:
+            # print(face)
+            frame_no = int(round(face[0]*framesObj['fps']))
+            x1 = int(face[1]*framesObj['width'])
+            y1 = int(face[2]*framesObj['height'])
+            x2 = int(face[3]*framesObj['width'])
+            y2 = int(face[4]*framesObj['height'])
+            cv2.rectangle(frames[frame_no], (x1, y1), (x2, y2), (0, 255, 0), 2)
+    videoSavePath = os.path.join(cacheDir, 'asd_visualization.mp4')
+    video_writer = cv2.VideoWriter(videoSavePath, cv2.VideoWriter_fourcc(*'mp4v'), \
+                                   framesObj['fps'], (framesObj['width'], framesObj['height']))
+    for frame in frames:
+        video_writer.write(frame)
+    video_writer.release()
+    print(f'asd video saved at {videoSavePath}')
 
         
+def visualize_distance_matrix(asd_checkpoint, cacheDir, speechEmbeddings, faceTrackEmbeddings):
+    distacnes_faces = np.zeros((len(asd_checkpoint.keys()), len(asd_checkpoint.keys())))
+    distances_speech = np.zeros((len(asd_checkpoint.keys()), len(asd_checkpoint.keys())))
+    for i, (segment_idi, tracki) in tqdm(enumerate(asd_checkpoint.items()), desc='computing distance matrices for visualization', total=len(asd_checkpoint.keys())):
+        for j, (segment_idj, trackj) in enumerate(asd_checkpoint.items()):
+            faceTrackEmbeddingi = faceTrackEmbeddings[tracki['track_id']]['embedding']
+            faceTrackEmbeddingj = faceTrackEmbeddings[trackj['track_id']]['embedding']
+            speechembeddingi = speechEmbeddings[segment_idi]['embedding']
+            speechembeddingj = speechEmbeddings[segment_idj]['embedding']
+            distacnes_faces[i, j] = cosine_dist(faceTrackEmbeddingi, faceTrackEmbeddingj)
+            distances_speech[i,j] = cosine_dist(speechembeddingi, speechembeddingj)
+    fig, ax = plt.subplots(1,2)
+    ax[0].imshow(distacnes_faces)
+    ax[1].imshow(distances_speech)
+    plt.savefig(os.path.join(cacheDir, 'distance_matrix.png'), dpi=300)
+        
+def splitWav(wavPath, segments, cacheDir):
+    """methods to split th audio file into smaller speaker homogeneous speech segments.
+        Also ensures that each segment is greater the 0.4 sec in duration, as is required 
+        by the speech recognition system.
+
+    Args:
+        segments (list): list of speaker homogeneous speech segments [segmentId, startTime, endTime]
+        wavDir (string): directory path to save the wav files (Dafaults to None)
     
-        
+    Returns:
+        None
+        Stores the split wav files in cache dir
+    """
+    # check for minimum duration constraint
+    rate, wavData = wavfile.read(wavPath)
+    totalDur = len(wavData)/rate
+    for i, segment in enumerate(segments):
+        dur = segment[2] - segment[1]
+        if dur < 0.4:
+            center = (segment[1] + segment[2])/2
+            st = max(0, center - 0.2)
+            et = st + 0.4
+            if et > totalDur:
+                et = totalDur
+                st = totalDur - 0.4
+            segments[i] = [segment[0], st, et]
+    wavDir = os.path.join(cacheDir, 'wavs')
+    os.makedirs(wavDir, exist_ok=True)
+
+    for segment in segments:
+        segmentId, st, et = segment
+        sf = int(st*rate)
+        ef = int(et*rate)
+        data_ = wavData[sf:ef]
+        if len(data_) == 0:
+            continue  
+        savePath = os.path.join(wavDir, f'{segmentId}.wav')
+        wavfile.write(savePath, rate, data_)
+    return wavDir

@@ -79,9 +79,9 @@ class Preprocessor():
         writeToPickleFile(segmentsOut, speechFaceTracksFile)
         return segmentsOut
 
-    def prep(self):
+    def prep(self, fps, resolution):
         speechEmbeddings = self.audioPrep.run()
-        faceTrackEmbeddings = self.videoPrep.run()
+        faceTrackEmbeddings = self.videoPrep.run(fps, resolution)
         faceTracks = {track_id: faceTrack['track'] for track_id, faceTrack in faceTrackEmbeddings.items()}
         speechSegments = [[segment_id] + segment['segment'] for segment_id, segment in speechEmbeddings.items()]
         speechFaceTracks = self.getTemporallyOverlappingFaceTracks(faceTracks, speechSegments)

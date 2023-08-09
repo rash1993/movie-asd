@@ -86,10 +86,10 @@ class SpeechFaceAssociation():
 
             for partition in partitions:
                 asd, posGuides, negGuides = self.initializeASD(partition)
-                ASD |= self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides)
+                ASD.update(self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides))
         else:
             asd, posGuides, negGuides = self.initializeASD(speechKeys)
-            ASD |= self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides) 
+            ASD.update(self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides))
         return ASD
     
     def findSpeechFaceAssociationPartion(self, asd, posGuides, negGuides):
@@ -144,7 +144,7 @@ class SpeechFaceAssociation():
                 faceDistances = asdFaceTrack[2]
             epochCorr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances)
             diffCorr = (epochCorr - lastCorr)/lastCorr
-            if diffCorr < 0.2:
+            if diffCorr < 0.1:
                 break
             else:
                 lastCorr = epochCorr

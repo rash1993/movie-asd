@@ -25,7 +25,7 @@ class VideoPreProcessor():
         self.verbose = verbose
         self.faceDetectorName = faceDetectorName
     
-    def getVideoFrames(self, fps=-1, cache=True):
+    def getVideoFrames(self, fps=-1, res=None, cache=True):
         framesFilePath = os.path.join(self.cacheDir, 'frames.pkl')
         if os.path.isfile(framesFilePath) and cache:
             if self.verbose:
@@ -34,7 +34,7 @@ class VideoPreProcessor():
         else:
             if self.verbose:
                 print(f'reading frames from the video')
-            framesObj = readVideoFrames(self.videoPath, fps=fps)
+            framesObj = readVideoFrames(self.videoPath, fps=fps, res=res)
             if cache:
                 writeToPickleFile(framesObj, framesFilePath)
         return framesObj
@@ -165,8 +165,8 @@ class VideoPreProcessor():
         video_writer.release()
         print(f'face tracks sanity check video saved at: {videoSavePath}')
 
-    def run(self):
-        framesObj = self.getVideoFrames(fps=-1)
+    def run(self, fps=-1, resolution=None):
+        framesObj = self.getVideoFrames(fps=fps, res=resolution)
         face_tracks = self.getFaceTracks(framesObj)
         face_track_embeddings =  self.getFaceTrackEmbeddings(framesObj, face_tracks)
         for track_id, track in face_tracks.items():

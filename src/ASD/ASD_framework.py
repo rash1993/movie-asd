@@ -21,7 +21,7 @@ class ASD():
         self.similarity = Similarity(measure=similarity_mesaure)
         self.verbose = verbose
 
-    def offscreenSpeakercorrection(self, th=0.2):
+    def offscreenSpeakercorrection(self, th=0.1):
         speechKeys = list(self.asd.keys())
         audioDistances = self.distances.computeDistanceMatrix(\
                                     speechKeys, modality='speech')
@@ -32,8 +32,6 @@ class ASD():
         offScreenSpeechKeys = [key_ for key_, corr_ in zip(speechKeys, corr) if corr_ < th]
         self.asd = {key:self.asd[key] for key in self.asd.keys() if key not in offScreenSpeechKeys}
         
-
-
     def run(self, speechFaceTracks, 
             faceTrackEmbeddings, 
             speechEmbeddings,
@@ -41,6 +39,7 @@ class ASD():
             partitionLen='full'):
         self.distances = Distances(faceTrackEmbeddings, speechEmbeddings, self.cacheDir, self.verbose)
         self.faceTracks = {track_id: track['track'] for track_id, track in faceTrackEmbeddings.items()}
+        self.sppeechSegments = {segment_id: segment['segment'] for segment_id, segment in speechEmbeddings.items()}
         speechFaceAssociation = SpeechFaceAssociation(self.cacheDir,\
                                                       speechFaceTracks,\
                                                       self.similarity,\
@@ -51,49 +50,15 @@ class ASD():
         self.asd = speechFaceAssociation.handler(partitionLen)
         self.offscreenSpeakercorrection()
         asdSaveFile = os.path.join(self.cacheDir, 'asd.pkl')
-        writeToPickleFile(self.asd, asdSaveFile)
+        asd_checkpoint = self.createCheckpoint(self.asd, self.sppeechSegments, self.faceTracks)
+        writeToPickleFile(asd_checkpoint, asdSaveFile)
+        return asd_checkpoint
     
-    def visualizeASD(self, videoPath):
-        framesFile = os.path.join(self.cacheDir, 'frames.pkl')
-        if os.path.isfile(framesFile):
-            framesObj = pkl.load(open(framesFile, 'rb'))
-        else:
-            framesObj = readVideoFrames(videoPath)
-
-        frames = framesObj['frames']
-        for i,frame in enumerate(frames):
-            frames[i] = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-        for _, faceTrack in self.faceTracks.items():
-            for box in faceTrack:
-                frameNo = int(round(box[0]*framesObj['fps']))
-                if frameNo < len(frames):
-                    x1 = int(round(box[1]*framesObj['width']))
-                    y1 = int(round(box[2]*framesObj['height']))
-                    x2 = int(round(box[3]*framesObj['width']))
-                    y2 = int(round(box[4]*framesObj['height']))
-                    cv2.rectangle(frames[frameNo], (x1, y1), (x2, y2), (255, 0, 0))
-
-        for key, faceTrackId in self.asd.items():
-            st, et = self.speechFaceTracks[key]['speech']
-            faceTrack = self.faceTracks[faceTrackId]
-            for box in faceTrack:
-                if box[0] >= st and box[0] <= et:
-                    frameNo = int(round(box[0]*framesObj['fps']))
-                    if frameNo < len(frames):
-                        x1 = int(round(box[1]*framesObj['width']))
-                        y1 = int(round(box[2]*framesObj['height']))
-                        x2 = int(round(box[3]*framesObj['width']))
-                        y2 = int(round(box[4]*framesObj['height']))
-                        cv2.rectangle(frames[frameNo], (x1, y1), (x2, y2), (0, 255, 0))
-
-        videoName = os.path.basename(videoPath)[:-4]
-        videoSavePath = os.path.join(self.cacheDir, f'{videoName}_asdOut.mp4')
-        wavPath = os.path.join(self.cacheDir, 'audio.wav')
-        if not os.path.isfile(wavPath):
-            wavCmd = f'ffmpeg -y -nostdin -loglevel error -y -i {videoPath} \
-                -ar 16k -ac 1 {wavPath}'
-            subprocess.call(wavCmd, shell=True, stdout=False)
-
-        make_video(frames, framesObj['fps'], videoSavePath, sound_fname=wavPath,
-                    keep_aud_file=True)
+    def createCheckpoint(self, asd, speechSegments, faceTracks):
+        asd_checkpoint = {}
+        for segment_id, active_face_track_id in asd.items():
+            segment = speechSegments[segment_id]
+            active_face_track = faceTracks[active_face_track_id]
+            active_face_track = [box for box in active_face_track if box[0] >= segment[0] and box[0] <= segment[1]]
+            asd_checkpoint[segment_id] = {'track_id': active_face_track_id, 'track':active_face_track}
+        return asd_checkpoint
