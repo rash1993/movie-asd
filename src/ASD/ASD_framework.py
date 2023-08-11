@@ -100,5 +100,12 @@ class ASD():
                 -ar 16k -ac 1 {wavPath}'
             subprocess.call(wavCmd, shell=True, stdout=False)
         
-        make_video(frames, framesObj['fps'], videoSavePath, sound_fname=wavPath,
-                    keep_aud_file=True)
+        video_writer = cv2.VideoWriter(videoSavePath, cv2.VideoWriter_fourcc(*'mp4v'), \
+                                   framesObj['fps'], (framesObj['width'], framesObj['height']))
+        for frame in frames:
+            video_writer.write(frame)
+        video_writer.release()
+        audio_video_merge_cmd  = f'ffmpeg -i {videoSavePath} -i {wavPath} -c copy {videoSavePath}_tmp'
+        subprocess.call(audio_video_merge_cmd, shell=True, stdout=False)
+        # TODO: remove the tmp file
+        print(f'asd video saved at {videoSavePath}')

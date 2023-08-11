@@ -43,7 +43,9 @@ def readVideoFrames(videoPath, res=(180, 360)):
         if flag:
             if res:
                 img = cv2.resize(img, (frameWidth, frameHeight))
+            frames.append(img)
             pbar.update(1)
+            
     pbar.close()
     
     return {'frames':frames, 'height':frameHeight, 'width':frameWidth, 'fps':FPS}
