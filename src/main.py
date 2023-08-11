@@ -33,6 +33,7 @@ if __name__ == '__main__':
                        cacheDir, guides=None, verbose=args.verbose)
     asdFramework.run()
     asdFramework.visualizeASD(args.videoPath)
+    asdFramework.visualizeDistanceMatrices()
 
 
 

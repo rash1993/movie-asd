@@ -12,6 +12,7 @@ from ASD.asd_utils import Distances, Similarity
 from ASD.speech_face_association import SpeechFaceAssociation
 from local_utils import readVideoFrames, writeToPickleFile
 from utils_cams import make_video
+from matplotlib import pyplot as plt
 
 
 
@@ -58,6 +59,18 @@ class ASD():
         asdSaveFile = os.path.join(self.cacheDir, 'asd.pkl')
         writeToPickleFile(self.asd, asdSaveFile)
     
+    def visualizeDistanceMatrices(self):
+        speechKeys = list(self.asd.keys())
+        speechKeys.sort(key=lambda x: self.speechFaceTracks[x]['speech'][0])
+        audioDistances = self.distances.computeDistanceMatrix(\
+                                    speechKeys, modality='speech')
+        faceDistances = self.distances.computeDistanceMatrix(\
+                                    speechKeys, asd=self.asd, modality='face')
+        fig, ax = plt.subplots(1,2)
+        ax[0].imshow(audioDistances)
+        ax[1].imshow(faceDistances)
+        plt.savefig(os.path.join(self.cacheDir, 'distance_matrix.png'), dpi=300)
+
     def visualizeASD(self, videoPath):
         framesFile = os.path.join(self.cacheDir, 'frames.pkl')
         if os.path.isfile(framesFile):
@@ -66,8 +79,6 @@ class ASD():
             framesObj = readVideoFrames(videoPath)
 
         frames = framesObj['frames']
-        for i,frame in enumerate(frames):
-            frames[i] = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         for _, faceTrack in self.faceTracks.items():
             for box in faceTrack:
@@ -105,7 +116,9 @@ class ASD():
         for frame in frames:
             video_writer.write(frame)
         video_writer.release()
-        audio_video_merge_cmd  = f'ffmpeg -i {videoSavePath} -i {wavPath} -c copy {videoSavePath}_tmp'
+        videoSavePathTmp = os.path.join(self.cacheDir, f'{videoName}_asdOut_tmp.mp4')
+        audio_video_merge_cmd  = f'ffmpeg -i {videoSavePath} -i {wavPath} -c:v copy -c:a aac {videoSavePathTmp}'
         subprocess.call(audio_video_merge_cmd, shell=True, stdout=False)
+        os.rename(f'{videoSavePathTmp}', videoSavePath)
         # TODO: remove the tmp file
         print(f'asd video saved at {videoSavePath}')
