@@ -99,6 +99,6 @@ class ASD():
             wavCmd = f'ffmpeg -y -nostdin -loglevel error -y -i {videoPath} \
                 -ar 16k -ac 1 {wavPath}'
             subprocess.call(wavCmd, shell=True, stdout=False)
-
+        
         make_video(frames, framesObj['fps'], videoSavePath, sound_fname=wavPath,
                     keep_aud_file=True)

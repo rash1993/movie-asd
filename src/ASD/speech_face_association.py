@@ -86,10 +86,10 @@ class SpeechFaceAssociation():
 
             for partition in partitions:
                 asd, posGuides, negGuides = self.initializeASD(partition)
-                ASD |= self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides)
+                ASD.update(self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides))
         else:
             asd, posGuides, negGuides = self.initializeASD(speechKeys)
-            ASD |= self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides) 
+            ASD.update(self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides)) 
         return ASD
     
     def findSpeechFaceAssociationPartion(self, asd, posGuides, negGuides):

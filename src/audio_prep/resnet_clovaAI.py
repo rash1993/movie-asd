@@ -64,7 +64,7 @@ class SpeakerRecognition():
                     'dcf_p_target': 0.05,
                     'dcf_c_miss': 1,
                     'dcf_c_fa': 1,
-                    'initial_model': '/data/rash/active-speaker-detection/voxceleb_trainer/baseline_v2_ap.model',
+                    'initial_model': '/home/azureuser/cloudfiles/code/movie-asd/voxceleb_trainer/baseline_v2_ap.model',
                     'save_path': 'exps/exp1',
                     'train_list': 'data/train_list.txt',
                     'test_list': 'data/test_list.txt',

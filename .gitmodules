@@ -1,15 +1,20 @@
 [submodule "Pytorch_Retinaface"]
 	path = Pytorch_Retinaface
 	url = https://github.com/rash1993/Pytorch_Retinaface.git
+	ignore = untracked
 [submodule "voxceleb_trainer"]
 	path = voxceleb_trainer
 	url = https://github.com/rash1993/voxceleb_trainer.git
+	ignore = untracked
 [submodule "sort"]
 	path = sort
 	url = https://github.com/rash1993/sort.git
+	ignore = untracked
 [submodule "Keras_VGGFace2_ResNet50"]
 	path = Keras_VGGFace2_ResNet50
 	url = https://github.com/rash1993/Keras_VGGFace2_ResNet50.git
+	ignore = untracked
 [submodule "TalkNet"]
 	path = TalkNet
 	url = https://github.com/rash1993/TalkNet.git
+	ignore = untracked

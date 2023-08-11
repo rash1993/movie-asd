@@ -35,10 +35,6 @@ class VideoPreProcessor():
             self.framesObj = readVideoFrames(self.videoPath)
             writeToPickleFile(self.framesObj, framesFilePath)
     
-    def getFaces(self):
-        
-
-
     def getFaceTracks(self):
         faceTracksFilePath = os.path.join(self.cacheDir, f'face_{self.faceDetectorName}.pkl')
         if os.path.isfile(faceTracksFilePath):

@@ -118,6 +118,6 @@ class RetinaFaceWithSortTracker():
         self.initRetinaFace()
         for shot in tqdm(self.shots, desc='extracting face tracks for each shot'):
             shotTracks = self.getFaceTracksInShot(shot)
-            tracks |= shotTracks
+            tracks.update(shotTracks)
         return tracks
         
