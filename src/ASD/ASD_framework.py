@@ -21,7 +21,7 @@ class ASD():
         self.similarity = Similarity(measure=similarity_mesaure)
         self.verbose = verbose
 
-    def offscreenSpeakercorrection(self, th=0.1):
+    def offscreenSpeakercorrection(self, th=0.2):
         speechKeys = list(self.asd.keys())
         audioDistances = self.distances.computeDistanceMatrix(\
                                     speechKeys, modality='speech')
