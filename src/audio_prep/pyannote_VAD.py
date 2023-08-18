@@ -31,10 +31,12 @@ class VoiceActivityDetector():
         model = Model.from_pretrained("pyannote/segmentation",\
                 use_auth_token='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')
         pipeline = VoiceActivityDetection(segmentation=model)
-        HYPER_PARAMETERS = {"onset": 0.767,
-                            "offset": 0.377,
-                            "min_duration_on": 0.136,
-                            "min_duration_off": 0.067}
+        HYPER_PARAMETERS = {"onset": 0.6, "offset": 0.4, 
+                  "min_duration_on": 0.0, "min_duration_off": 0.0}
+        # HYPER_PARAMETERS = {"onset": 0.767,
+        #                     "offset": 0.377,
+        #                     "min_duration_on": 0.136,
+        #                     "min_duration_off": 0.067}
         pipeline.instantiate(HYPER_PARAMETERS)
         vad = pipeline(self.wavPath)
         vad = [[d.start, d.end] for d in vad.get_timeline()]

@@ -15,7 +15,7 @@ import pickle as pkl
 from tqdm import tqdm
 
 class Distances():
-    def __init__(self, faceFeatures, speechFeatures, cacheDir, verbose=False):
+    def __init__(self, faceFeatures, speechFeatures, cacheDir, verbose):
         self.cacheDir = cacheDir
         self.faceFeatures = faceFeatures
         self.speechFeatures = speechFeatures

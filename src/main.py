@@ -30,11 +30,8 @@ if __name__ == '__main__':
                        preprocessor.videoPrep.faceTracks,\
                        preprocessor.videoPrep.faceTrackFeats,\
                        preprocessor.audioPrep.speechEmbeddings,\
-                       cacheDir, guides=None, verbose=args.verbose)
+                       cacheDir, guides=None, verbose=args.verbose, \
+                       marginalFaceTracks=preprocessor.speechFaceTracksMarginal)
     asdFramework.run()
     asdFramework.visualizeASD(args.videoPath)
     asdFramework.visualizeDistanceMatrices()
-
-
-
-    

@@ -110,7 +110,8 @@ class RetinaFaceWithSortTracker():
                     tracks[track_label] = [box]
         return tracks
          
-   
+    def get_duration_track(self, track):
+        return track[-1][0] - track[0][0]
 
     def run(self):
         tracks = {}
@@ -119,5 +120,7 @@ class RetinaFaceWithSortTracker():
         for shot in tqdm(self.shots, desc='extracting face tracks for each shot'):
             shotTracks = self.getFaceTracksInShot(shot)
             tracks.update(shotTracks)
+        tracks = {trackId: track for trackId, track in tracks.items() if self.get_duration_track(track) > 0.25 }
+        
         return tracks
         

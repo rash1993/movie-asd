@@ -13,6 +13,7 @@ from ASD.speech_face_association import SpeechFaceAssociation
 from local_utils import readVideoFrames, writeToPickleFile
 from utils_cams import make_video
 from matplotlib import pyplot as plt
+import numpy as np
 
 
 
@@ -21,7 +22,7 @@ class ASD():
                 speechFaceTracks, 
                 faceTracks, 
                 faceFeatures, 
-                speechFeatures, cacheDir, guides=None, verbose=False):
+                speechFeatures, cacheDir, guides=None, verbose=False, marginalFaceTracks=None):
         self.speechFaceTracks = speechFaceTracks
         self.faceTracks = faceTracks
         self.faceFeatures = faceFeatures
@@ -29,6 +30,7 @@ class ASD():
         self.cacheDir = cacheDir
         self.guides = guides
         self.verbose = verbose
+        self.marginalFaceTracks = marginalFaceTracks
         self.similarity = Similarity(measure='correlation')
         self.distances = Distances(faceFeatures, speechFeatures, \
             self.cacheDir, verbose=self.verbose)
@@ -43,8 +45,46 @@ class ASD():
                                     audioDistances, faceDistances, avg=False)
         offScreenSpeechKeys = [key_ for key_, corr_ in zip(speechKeys, corr) if corr_ < th]
         self.asd = {key:self.asd[key] for key in self.asd.keys() if key not in offScreenSpeechKeys}
-        
+    
+    def getMarginalDistances(self):
+        keys = list(self.asd.keys())
+        marginal_distances = []
+        for key in keys:
+            mdistances = []
+            for trackId  in self.marginalFaceTracks[key]['face_tracks']:
+                if trackId[0] != self.asd[key]:
+                    asd = self.asd.copy()
+                    asd[key] = trackId[0]
+                    keys_ = keys
+                    audioDistances = self.distances.computeDistanceMatrix(\
+                                        keys_, modality='speech')   
+                    faceDistances = self.distances.computeDistanceMatrix(\
+                                        keys_, asd=asd, modality='face')
+                    corr = self.similarity.computeAvgSimilarity(\
+                                        audioDistances, faceDistances, avg=True)
+                    mdistances.append([trackId[0], corr])
+            mdistances.sort(key=lambda x: x[1], reverse=True)
+            marginal_distances.append([key] + mdistances[0])
+        return marginal_distances
 
+    def offscreenSpeakercorrection2(self):
+        # optimize the matrix to the maximum value by replacing the faces with the neighboring \
+        # faces in the matrix. Starting with the highly likely off-screen speaker move to the least likely
+        while True:
+            audioDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), modality='speech')
+            faceDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), asd=self.asd, modality='face')
+            curr_corr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances, avg=True)
+            marginal_distances = self.getMarginalDistances()
+            # print(marginal_distances)
+            sel_key = max(marginal_distances, key=lambda x: x[2])
+            if sel_key[2] > curr_corr:
+                self.asd[sel_key[0]] = sel_key[1]
+                print(f'curr_corr: {curr_corr} | sel_key: {sel_key}')
+            else:
+                break
+
+
+        
 
     def run(self, partitionLen='full'):
         speechFaceAssociation = SpeechFaceAssociation(self.cacheDir,\
@@ -55,7 +95,12 @@ class ASD():
                                                       self.guides,\
                                                       self.verbose)
         self.asd = speechFaceAssociation.handler(partitionLen)
-        self.offscreenSpeakercorrection()
+        # self.offscreenSpeakercorrection()
+        self.offscreenSpeakercorrection2()
+        audioDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), modality='speech')
+        faceDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), asd=self.asd, modality='face')
+        corr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances, avg=False)
+        print([[key, corr_] for key, corr_ in zip(self.asd.keys(), corr)])
         asdSaveFile = os.path.join(self.cacheDir, 'asd.pkl')
         writeToPickleFile(self.asd, asdSaveFile)
     
@@ -67,9 +112,31 @@ class ASD():
         faceDistances = self.distances.computeDistanceMatrix(\
                                     speechKeys, asd=self.asd, modality='face')
         fig, ax = plt.subplots(1,2)
+    
         ax[0].imshow(audioDistances)
         ax[1].imshow(faceDistances)
         plt.savefig(os.path.join(self.cacheDir, 'distance_matrix.png'), dpi=300)
+
+        # temp: testing the distances fro off-screen speakers
+        keys = list(self.asd.keys())
+        keys.sort(key=lambda x: self.speechFaceTracks[x]['speech'][0]) 
+        marginal_distances = {}
+        for i, key in enumerate(keys):
+            marginal_distances[key] = {}
+            for trackId  in self.marginalFaceTracks[key]['face_tracks']:
+                trackId = trackId[0]
+                asd =self.asd.copy()
+                asd[key] = trackId
+                keys_ = keys
+                audioDistances = self.distances.computeDistanceMatrix(\
+                                    keys_, modality='speech')   
+                faceDistances = self.distances.computeDistanceMatrix(\
+                                    keys_, asd=asd, modality='face')
+                corr = self.similarity.computeAvgSimilarity(\
+                                    audioDistances, faceDistances, avg=False)
+                marginal_distances[key][trackId] = (corr[i], np.mean(corr))
+        writeToPickleFile(marginal_distances, os.path.join(self.cacheDir, 'marginal_distances.pkl'))
+
 
     def visualizeASD(self, videoPath):
         framesFile = os.path.join(self.cacheDir, 'frames.pkl')
@@ -80,7 +147,7 @@ class ASD():
 
         frames = framesObj['frames']
 
-        for _, faceTrack in self.faceTracks.items():
+        for facetrackId, faceTrack in self.faceTracks.items():
             for box in faceTrack:
                 frameNo = int(round(box[0]*framesObj['fps']))
                 if frameNo < len(frames):
@@ -89,7 +156,10 @@ class ASD():
                     x2 = int(round(box[3]*framesObj['width']))
                     y2 = int(round(box[4]*framesObj['height']))
                     cv2.rectangle(frames[frameNo], (x1, y1), (x2, y2), (255, 0, 0))
-
+                    # printing the name of the face track
+                    cv2.putText(frames[frameNo], str(facetrackId), (x1, y1 - 10), \
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+                    
         for key, faceTrackId in self.asd.items():
             st, et = self.speechFaceTracks[key]['speech']
             faceTrack = self.faceTracks[faceTrackId]
@@ -102,6 +172,19 @@ class ASD():
                         x2 = int(round(box[3]*framesObj['width']))
                         y2 = int(round(box[4]*framesObj['height']))
                         cv2.rectangle(frames[frameNo], (x1, y1), (x2, y2), (0, 255, 0))
+                        
+        # printing the active speaker face track id on the frames
+        for key, faceTrackId in self.asd.items():
+            st, et = self.speechFaceTracks[key]['speech']
+            sf = int(round(st*framesObj['fps']))
+            ef = int(round(et*framesObj['fps']))
+            for frameNo in range(sf, ef):
+                if frameNo < len(frames):
+                    cv2.putText(frames[frameNo], str(faceTrackId), (10, 10), \
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
+                    cv2.putText(frames[frameNo], str(key), \
+                                (int(framesObj['width'])-50, int(framesObj['height'])-20), \
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
 
         videoName = os.path.basename(videoPath)[:-4]
         videoSavePath = os.path.join(self.cacheDir, f'{videoName}_asdOut.mp4')
@@ -112,7 +195,7 @@ class ASD():
             subprocess.call(wavCmd, shell=True, stdout=False)
         
         video_writer = cv2.VideoWriter(videoSavePath, cv2.VideoWriter_fourcc(*'mp4v'), \
-                                   framesObj['fps'], (framesObj['width'], framesObj['height']))
+                                   framesObj['fps'], (int(framesObj['width']), int(framesObj['height'])))
         for frame in frames:
             video_writer.write(frame)
         video_writer.release()

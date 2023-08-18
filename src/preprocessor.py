@@ -3,7 +3,7 @@
  * @email rahul.sharma@usc.edu
  * @create date 2023-02-08 12:58:15
  * @modify date 2023-02-08 12:58:15
- * @desc [description]
+* @desc [description]
  */'''
 import sys, os
 from audio_prep.audio_preprocessing import AudioPreProcessor
@@ -80,14 +80,14 @@ class Preprocessor():
         speechFaceTracksFile = os.path.join(self.cacheDir, 'speechFaceTracks.pkl')
         writeToPickleFile(self.speechFaceTracks, speechFaceTracksFile)
 
-    def getPotentialActiveSpeakerFaceTracks(self, faceTracks, speechSegments, faceTrackDistances, th=0.2):
+    def getPotentialActiveSpeakerFaceTracks(self, faceTracks, speechSegments, faceTrackDistances, th=0.4):
         '''
         Method to get potential active speaker face track for each speech segment, which includes all the faces
         in the shot of the speech segment and the faces in the shots which are temporally close to the shot of the
         speech segment. THe face tracks are chosen such that they belong to unique characters.
         '''
         
-        self.speechFaceTracks = {}
+        self.speechFaceTracksMarginal = {}
         for segment in speechSegments:
             segmentId = segment[0]
             shotId = segmentId.split('_')[0]
@@ -98,31 +98,29 @@ class Preprocessor():
                                          if int(faceTrackId.split('_')[0]) == int(shotId) + 1])
             marginalFaceTracks.extend([faceTrackId for faceTrackId, faceTrack in faceTracks.items()\
                                             if int(faceTrackId.split('_')[0]) == int(shotId) - 1])
+            
             # filter out the face tracks from marginal which are close to face tracks in \
             # potential active speakers in terms of the cosine distance between the face tracks.
             for marginalFaceTrackId in marginalFaceTracks:
+                flag = True
                 for potentialFaceTrackId in potentialActiveSpeakers:
                     if faceTrackDistances[marginalFaceTrackId][potentialFaceTrackId] < th:
-                        potentialActiveSpeakers.append(marginalFaceTrackId)
+                        flag = False
+                        break
+                if flag:
+                    potentialActiveSpeakers.append(marginalFaceTrackId)
+                    
             potentialActiveSpeakers = [[faceTrackId] + segment[1:] for faceTrackId in potentialActiveSpeakers]
-            self.speechFaceTracks[segmentId] = {'speech': segment[1:], 'face_tracks': potentialActiveSpeakers}
-
+            self.speechFaceTracksMarginal[segmentId] = {'speech': segment[1:], 'face_tracks': potentialActiveSpeakers}
+        # speechFaceTracksFile = os.path.join(self.cacheDir, 'speechFaceTracks.pkl')
+        # writeToPickleFile(self.speechFaceTracks, speechFaceTracksFile)
 
     def prep(self):
         self.audioPrep.run()
         self.videoPrep.run()
-        # self.getTemporallyOverlappingFaceTracks(self.videoPrep.faceTracks,\
-        #      self.audioPrep.speakerHomoSegments)
+        self.getTemporallyOverlappingFaceTracks(self.videoPrep.faceTracks,\
+             self.audioPrep.speakerHomoSegments)
         faceTrackDistances = Distances(self.videoPrep.faceTrackFeats, self.audioPrep.speechEmbeddings, \
             self.cacheDir, verbose=self.verbose).faceDistances
         self.getPotentialActiveSpeakerFaceTracks(self.videoPrep.faceTracks,\
              self.audioPrep.speakerHomoSegments, faceTrackDistances)
-        
-        
-        
-
-
-        
-
-        
-

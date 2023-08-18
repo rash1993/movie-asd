@@ -35,10 +35,16 @@ class AudioPreProcessor():
             subprocess.call(wavCmd, shell=True, stdout=False)
     
     def getVoiceAvtivity(self, VAD='pyannote'):
-        if VAD == 'pyannote':
-            self.vad = pyannoteVAD(self.wavPath).run()
+        vadFile = os.path.join(self.cacheDir, 'vad.pkl')
+        if os.path.isfile(vadFile):
+            if self.verbose:
+                print('reading VAD from cache')
+            self.vad = pkl.load(open(vadFile, 'rb'))
         else:
-            sys.exit(f'VAD system {VAD} not implemented')
+            if self.verbose:
+                print('computing VAD')
+            self.vad = pyannoteVAD(self.wavPath).run()
+            writeToPickleFile(self.vad, vadFile)
 
     def getSpeakerHomogeneousSegmentsPyannote(self):
         scd = pyannoteSCD(self.wavPath).run()
