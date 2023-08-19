@@ -15,6 +15,7 @@ from utils_cams import make_video
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr
 import numpy as np
+from tqdm import tqdm
 
 
 
@@ -37,7 +38,7 @@ class ASD():
         self.distances = Distances(faceFeatures, speechFeatures, \
             self.cacheDir, verbose=self.verbose)
 
-    def offscreenSpeakercorrection(self, th=0.2):
+    def offscreenSpeakercorrection(self, th=0.1):
         speechKeys = list(self.asd.keys())
         audioDistances = self.distances.computeDistanceMatrix(\
                                     speechKeys, modality='speech')
@@ -53,7 +54,7 @@ class ASD():
         audioDistances = self.distances.computeDistanceMatrix(\
                                         keys, modality='speech') 
         marginal_distances = []
-        for i, key in tqdm(enumerate(keys, desc='computing marginal distances')):
+        for i, key in tqdm(enumerate(keys), desc='computing marginal distances'):
             audioDistanceVector = audioDistances[i]
             currCorri = currCorr[i]
             mdistances = []
@@ -66,7 +67,7 @@ class ASD():
                                         keys_, asd=asd, modality='face')
                     faceDistanceVector = faceDistances[i]
                     newCorri = pearsonr(audioDistanceVector, faceDistanceVector)[0]
-                    mdistances.append([trackId[0], corr - currCorri])
+                    mdistances.append([trackId[0], newCorri - currCorri])
             mdistances.sort(key=lambda x: x[1], reverse=True)
             marginal_distances.append([key] + mdistances[0])
         return marginal_distances
@@ -74,22 +75,25 @@ class ASD():
     def offscreenSpeakercorrection2(self):
         # optimize the matrix to the maximum value by replacing the faces with the neighboring \
         # faces in the matrix. Starting with the highly likely off-screen speaker move to the least likely
+        last_corr = 0.0
+        audioDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), modality='speech')
+        faceDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), asd=self.asd, modality='face')
+        last_corr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances, avg=False)
+        curr_corr = last_corr
         while True:
-            audioDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), modality='speech')
-            faceDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), asd=self.asd, modality='face')
-            curr_corr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances, avg=True)
-            marginal_distances = self.getMarginalDistances()
-            # print(marginal_distances)
+            last_corr = curr_corr.copy()
+            marginal_distances = self.getMarginalDistances(curr_corr)
             sel_key = max(marginal_distances, key=lambda x: x[2])
-            if sel_key[2] > 0:
+            if (sel_key[2] > 0) and (sel_key[2] > 0.1):
                 self.asd[sel_key[0]] = sel_key[1]
-                print(f'curr_corr: {curr_corr} | sel_key: {sel_key}')
+                faceDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), asd=self.asd, modality='face')
+                curr_corr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances, avg=False)
+                print(f'curr_corr: {np.mean(curr_corr)} | sel_key: {sel_key}, last_corr: {np.mean(last_corr)}')
             else:
                 break
-
-
-
-        
+            if (np.mean(curr_corr) - np.mean(last_corr))/np.mean(last_corr) < 0.01:
+                break
+            
 
     def run(self, partitionLen='full'):
         speechFaceAssociation = SpeechFaceAssociation(self.cacheDir,\
@@ -100,8 +104,8 @@ class ASD():
                                                       self.guides,\
                                                       self.verbose)
         self.asd = speechFaceAssociation.handler(partitionLen)
-        # self.offscreenSpeakercorrection()
         self.offscreenSpeakercorrection2()
+        self.offscreenSpeakercorrection()
         audioDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), modality='speech')
         faceDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), asd=self.asd, modality='face')
         corr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances, avg=False)
@@ -121,27 +125,6 @@ class ASD():
         ax[0].imshow(audioDistances)
         ax[1].imshow(faceDistances)
         plt.savefig(os.path.join(self.cacheDir, 'distance_matrix.png'), dpi=300)
-
-        # temp: testing the distances fro off-screen speakers
-        keys = list(self.asd.keys())
-        keys.sort(key=lambda x: self.speechFaceTracks[x]['speech'][0]) 
-        marginal_distances = {}
-        for i, key in enumerate(keys):
-            marginal_distances[key] = {}
-            for trackId  in self.marginalFaceTracks[key]['face_tracks']:
-                trackId = trackId[0]
-                asd =self.asd.copy()
-                asd[key] = trackId
-                keys_ = keys
-                audioDistances = self.distances.computeDistanceMatrix(\
-                                    keys_, modality='speech')   
-                faceDistances = self.distances.computeDistanceMatrix(\
-                                    keys_, asd=asd, modality='face')
-                corr = self.similarity.computeAvgSimilarity(\
-                                    audioDistances, faceDistances, avg=False)
-                marginal_distances[key][trackId] = (corr[i], np.mean(corr))
-        writeToPickleFile(marginal_distances, os.path.join(self.cacheDir, 'marginal_distances.pkl'))
-
 
     def visualizeASD(self, videoPath):
         framesFile = os.path.join(self.cacheDir, 'frames.pkl')

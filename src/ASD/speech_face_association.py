@@ -9,6 +9,7 @@ import random
 import numpy as np
 from tqdm import tqdm
 from copy import deepcopy
+from random import shuffle
 SEED = 4
 
 class SpeechFaceAssociation():
@@ -28,6 +29,13 @@ class SpeechFaceAssociation():
         self.guides = guides
         self.verbose = verbose
 
+    def getFaceTrackArea(self, faceTrackId):
+        faceTrack = self.faceTracks[faceTrackId]
+        area = 0.0
+        for box in faceTrack:
+            area += (box[3]-box[1])*(box[4]-box[2])
+        
+        return area / len(faceTrack)
     def initializeASD(self, speechKeys):  # sourcery skip: do-not-use-bare-except
         asd = {} # assigned face track for each speech segment ['speechSegment': 'faceTrack']
         posGuides = [] # list of speech segments
@@ -67,23 +75,25 @@ class SpeechFaceAssociation():
                 tracks = self.speechFaceTracks[key_]['face_tracks']
                 if len(tracks) == 0:
                     continue
-                asd[key_] = tracks[np.random.randint(0, len(tracks), size=1)[0]][0]
+                # initializing with max area face track
+                asd[key_] = max(tracks, key=lambda x: self.getFaceTrackArea(x[0]))[0]
+                # asd[key_] = tracks[np.random.randint(0, len(tracks), size=1)[0]][0]
         return asd, posGuides, negGuides
 
     def handler(self, partitionLen):
         speechKeys = list(self.speechFaceTracks.keys())
-        speechKeys.sort(key=lambda x: self.speechFaceTracks[x]['speech'][0]) # sorting with start time
+        # speechKeys.sort(key=lambda x: self.speechFaceTracks[x]['speech'][0]) # sorting with start time
+        shuffle(speechKeys)
         ASD = {}
         if str(partitionLen).isdigit():
             numPartitions = int(np.ceil(len(speechKeys)/partitionLen))
             partitions = [
-                [speechKeys[i * partitionLen : (i + 1) * partitionLen]]
+                speechKeys[i * partitionLen : (i + 1) * partitionLen]
                 for i in range(numPartitions)
             ]
             if len(partitions[-1])<5:
                 partitions[-2] = partitions[-2] + partitions[-1]
                 del partitions[-1]
-
             for partition in partitions:
                 asd, posGuides, negGuides = self.initializeASD(partition)
                 ASD.update(self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides))
