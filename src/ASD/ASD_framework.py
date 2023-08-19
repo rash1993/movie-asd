@@ -13,7 +13,9 @@ from ASD.speech_face_association import SpeechFaceAssociation
 from local_utils import readVideoFrames, writeToPickleFile
 from utils_cams import make_video
 from matplotlib import pyplot as plt
+from scipy.stats import pearsonr
 import numpy as np
+
 
 
 
@@ -46,23 +48,25 @@ class ASD():
         offScreenSpeechKeys = [key_ for key_, corr_ in zip(speechKeys, corr) if corr_ < th]
         self.asd = {key:self.asd[key] for key in self.asd.keys() if key not in offScreenSpeechKeys}
     
-    def getMarginalDistances(self):
+    def getMarginalDistances(self, currCorr):
         keys = list(self.asd.keys())
+        audioDistances = self.distances.computeDistanceMatrix(\
+                                        keys, modality='speech') 
         marginal_distances = []
-        for key in keys:
+        for i, key in tqdm(enumerate(keys, desc='computing marginal distances')):
+            audioDistanceVector = audioDistances[i]
+            currCorri = currCorr[i]
             mdistances = []
             for trackId  in self.marginalFaceTracks[key]['face_tracks']:
                 if trackId[0] != self.asd[key]:
                     asd = self.asd.copy()
                     asd[key] = trackId[0]
                     keys_ = keys
-                    audioDistances = self.distances.computeDistanceMatrix(\
-                                        keys_, modality='speech')   
                     faceDistances = self.distances.computeDistanceMatrix(\
                                         keys_, asd=asd, modality='face')
-                    corr = self.similarity.computeAvgSimilarity(\
-                                        audioDistances, faceDistances, avg=True)
-                    mdistances.append([trackId[0], corr])
+                    faceDistanceVector = faceDistances[i]
+                    newCorri = pearsonr(audioDistanceVector, faceDistanceVector)[0]
+                    mdistances.append([trackId[0], corr - currCorri])
             mdistances.sort(key=lambda x: x[1], reverse=True)
             marginal_distances.append([key] + mdistances[0])
         return marginal_distances
@@ -77,11 +81,12 @@ class ASD():
             marginal_distances = self.getMarginalDistances()
             # print(marginal_distances)
             sel_key = max(marginal_distances, key=lambda x: x[2])
-            if sel_key[2] > curr_corr:
+            if sel_key[2] > 0:
                 self.asd[sel_key[0]] = sel_key[1]
                 print(f'curr_corr: {curr_corr} | sel_key: {sel_key}')
             else:
                 break
+
 
 
         
