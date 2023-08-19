@@ -34,7 +34,7 @@ if __name__ == '__main__':
                        cacheDir, guides=None, verbose=args.verbose, \
                        marginalFaceTracks=preprocessor.speechFaceTracksMarginal)
     if args.partitionLength == -1:
-        prtitionLength = 'full'
+        partitionLength = 'full'
     else:
         partitionLength = args.partitionLength
     asdFramework.run(partitionLen=partitionLength)
