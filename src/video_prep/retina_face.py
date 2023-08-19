@@ -49,6 +49,7 @@ class RetinaFaceWithSortTracker():
         frames = self.framesObj['frames'][shotStartFrame : shortEndFrame]
         img_height, img_width, _ = frames[0].shape
         tracks = {}
+        tracks_landmarks = {}
         tracker = Sort()
         for ctr, img in enumerate(frames):
             img = np.float32(img)
@@ -97,21 +98,20 @@ class RetinaFaceWithSortTracker():
 
             for j in range(track_bbs_ids.shape[0]): 
                 ele = track_bbs_ids[j, :]
+                landms_ = landms[j, :]
                 x = int(ele[0])/self.framesObj['width']
                 y = int(ele[1])/self.framesObj['height']
                 x2 = int(ele[2])/self.framesObj['width']
                 y2 = int(ele[3])/self.framesObj['height']
                 track_label = f'{shotID}_{int(ele[4])}'
                 time = ctr/self.framesObj['fps'] + shotStartTime
-                box = [time, x, y, x2, y2]
+                box = [time, x, y, x2, y2, landms_]
                 try:
                     tracks[track_label].append(box)
                 except:
                     tracks[track_label] = [box]
         return tracks
          
-   
-
     def run(self):
         tracks = {}
         self.shots = shotDetect(self.videoPath,self.cacheDir)
