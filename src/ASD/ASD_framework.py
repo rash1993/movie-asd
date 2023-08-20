@@ -17,9 +17,6 @@ from scipy.stats import pearsonr
 import numpy as np
 from tqdm import tqdm
 
-
-
-
 class ASD():
     def __init__(self, 
                 speechFaceTracks, 
@@ -98,6 +95,7 @@ class ASD():
     def run(self, partitionLen='full'):
         speechFaceAssociation = SpeechFaceAssociation(self.cacheDir,\
                                                       self.speechFaceTracks,\
+                                                      self.marginalFaceTracks,\
                                                       self.similarity,\
                                                       self.distances,\
                                                       self.faceTracks,\
@@ -105,11 +103,11 @@ class ASD():
                                                       self.verbose)
         self.asd = speechFaceAssociation.handler(partitionLen)
         # self.offscreenSpeakercorrection2()
-        self.offscreenSpeakercorrection()
-        audioDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), modality='speech')
-        faceDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), asd=self.asd, modality='face')
-        corr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances, avg=False)
-        print([[key, corr_] for key, corr_ in zip(self.asd.keys(), corr)])
+        # self.offscreenSpeakercorrection()
+        # audioDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), modality='speech')
+        # faceDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), asd=self.asd, modality='face')
+        # corr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances, avg=False)
+        # print([[key, corr_] for key, corr_ in zip(self.asd.keys(), corr)])
         asdSaveFile = os.path.join(self.cacheDir, 'asd.pkl')
         writeToPickleFile(self.asd, asdSaveFile)
     
@@ -148,19 +146,19 @@ class ASD():
                     cv2.putText(frames[frameNo], str(facetrackId), (x1, y1 - 10), \
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
                     # draw markers at face landmarks
-                    landms = np.array(box[-1]).reshape((-1, 2))
-                    # faceProfile = getFaceProfile(landms)
-                    landms[:,0]*=framesObj['width']
-                    landms[:,1]*=framesObj['height']
-                    eyeDistance = str(round(getEyeDistance(landms) , 2))
-                    cv2.putText(frames[frameNo], eyeDistance, (x2, y2 + 10), \
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
-                    for i, mark in enumerate(landms):
-                        x = int(mark[0])
-                        y = int(mark[1])
-                        cv2.drawMarker(frames[frameNo], (x, y), \
-                                color=(0,0,255), thickness=1, markerType=cv2.MARKER_CROSS, \
-                                markerSize=4)
+                    # landms = np.array(box[-1]).reshape((-1, 2))
+                    # # faceProfile = getFaceProfile(landms)
+                    # landms[:,0]*=framesObj['width']
+                    # landms[:,1]*=framesObj['height']
+                    # eyeDistance = str(round(getEyeDistance(landms) , 2))
+                    # cv2.putText(frames[frameNo], eyeDistance, (x2, y2 + 10), \
+                    #     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+                    # for i, mark in enumerate(landms):
+                    #     x = int(mark[0])
+                    #     y = int(mark[1])
+                    #     cv2.drawMarker(frames[frameNo], (x, y), \
+                    #             color=(0,0,255), thickness=1, markerType=cv2.MARKER_CROSS, \
+                    #             markerSize=4)
         for key, faceTrackId in self.asd.items():
             st, et = self.speechFaceTracks[key]['speech']
             faceTrack = self.faceTracks[faceTrackId]

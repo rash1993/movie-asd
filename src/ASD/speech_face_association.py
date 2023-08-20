@@ -10,12 +10,14 @@ import numpy as np
 from tqdm import tqdm
 from copy import deepcopy
 from random import shuffle
+from scipy.stats import pearsonr
 SEED = 4
 
 class SpeechFaceAssociation():
     def __init__(self, 
                  cacheDir,
                  speechFaceTracks, 
+                 marginalFaceTracks,
                  similarity, 
                  distances, 
                  faceTracks, 
@@ -23,6 +25,7 @@ class SpeechFaceAssociation():
                  verbose=False):
         self.cacheDir = cacheDir
         self.speechFaceTracks = speechFaceTracks
+        self.marginalFaceTracks = marginalFaceTracks
         self.similarity = similarity
         self.distances = distances
         self.faceTracks = faceTracks
@@ -36,6 +39,7 @@ class SpeechFaceAssociation():
             area += (box[3]-box[1])*(box[4]-box[2])
         
         return area / len(faceTrack)
+    
     def initializeASD(self, speechKeys):  # sourcery skip: do-not-use-bare-except
         asd = {} # assigned face track for each speech segment ['speechSegment': 'faceTrack']
         posGuides = [] # list of speech segments
@@ -94,14 +98,79 @@ class SpeechFaceAssociation():
             if len(partitions[-1])<5:
                 partitions[-2] = partitions[-2] + partitions[-1]
                 del partitions[-1]
-            for partition in partitions:
+            for partitionNum, partition in enumerate(partitions):
+                print(f'optimizing the partition {partitionNum} of {len(partitions)}')
                 asd, posGuides, negGuides = self.initializeASD(partition)
-                ASD.update(self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides))
+                asd = self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides)
+                asd = self.offscreenSpeakercorrection2(asd)
+                ASD.update(asd)
         else:
             asd, posGuides, negGuides = self.initializeASD(speechKeys)
-            ASD.update(self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides)) 
+            asd = self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides)
+            asd = self.offscreenSpeakercorrection2(asd)
+            ASD.update(asd)
+        ASD =  self.offscreenSpeakercorrection(ASD)
         return ASD
     
+    def offscreenSpeakercorrection(self, asd, th=0.1):
+        speechKeys = list(asd.keys())
+        audioDistances = self.distances.computeDistanceMatrix(\
+                                    speechKeys, modality='speech')
+        faceDistances = self.distances.computeDistanceMatrix(\
+                                    speechKeys, asd=asd, modality='face')
+        corr = self.similarity.computeAvgSimilarity(\
+                                    audioDistances, faceDistances, avg=False)
+        offScreenSpeechKeys = [key_ for key_, corr_ in zip(speechKeys, corr) if corr_ < th]
+        asd = {key:asd[key] for key in asd.keys() if key not in offScreenSpeechKeys}
+        return asd
+    
+    def getMarginalDistances(self, asd, currCorr):
+        keys = list(asd.keys())
+        audioDistances = self.distances.computeDistanceMatrix(\
+                                        keys, modality='speech') 
+        marginal_distances = []
+        for i, key in tqdm(enumerate(keys), desc='computing marginal distances'):
+            audioDistanceVector = audioDistances[i]
+            currCorri = currCorr[i]
+            mdistances = []
+            for trackId  in self.marginalFaceTracks[key]['face_tracks']:
+                if trackId[0] != asd[key]:
+                    asd_ = asd.copy()
+                    asd_[key] = trackId[0]
+                    keys_ = keys
+                    faceDistances = self.distances.computeDistanceMatrix(\
+                                        keys_, asd=asd_, modality='face')
+                    faceDistanceVector = faceDistances[i]
+                    newCorri = pearsonr(audioDistanceVector, faceDistanceVector)[0]
+                    mdistances.append([trackId[0], newCorri - currCorri])
+            mdistances.sort(key=lambda x: x[1], reverse=True)
+            marginal_distances.append([key] + mdistances[0])
+        return marginal_distances
+
+    def offscreenSpeakercorrection2(self, asd):
+        # optimize the matrix to the maximum value by replacing the faces with the neighboring \
+        # faces in the matrix. Starting with the highly likely off-screen speaker move to the least likely
+        last_corr = 0.0
+        keys = list(asd.keys())
+        audioDistances = self.distances.computeDistanceMatrix(keys=keys, modality='speech')
+        faceDistances = self.distances.computeDistanceMatrix(keys=keys, asd=asd, modality='face')
+        last_corr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances, avg=False)
+        curr_corr = last_corr
+        while True:
+            last_corr = curr_corr.copy()
+            marginal_distances = self.getMarginalDistances(asd, curr_corr)
+            sel_key = max(marginal_distances, key=lambda x: x[2])
+            if (sel_key[2] > 0) and (sel_key[2] > 0.1):
+                asd[sel_key[0]] = sel_key[1]
+                faceDistances = self.distances.computeDistanceMatrix(keys=keys, asd=asd, modality='face')
+                curr_corr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances, avg=False)
+                print(f'curr_corr: {np.mean(curr_corr)} | sel_key: {sel_key}, last_corr: {np.mean(last_corr)}')
+            else:
+                break
+            if (np.mean(curr_corr) - np.mean(last_corr))/np.mean(last_corr) < 0.01:
+                break
+        return asd
+            
     def findSpeechFaceAssociationPartion(self, asd, posGuides, negGuides):
         # sourcery skip: low-code-quality
         if self.verbose:
