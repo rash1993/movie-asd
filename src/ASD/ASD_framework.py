@@ -90,6 +90,12 @@ class ASD():
                     y2 = int(round(box[4]*framesObj['height']))
                     cv2.rectangle(frames[frameNo], (x1, y1), (x2, y2), (255, 0, 0))
 
+                    # draw markers at face landmarks
+                    landms = np.array(box[-1]).reshape((-1, 2))
+                    for i, mark in enumerate(landms):
+                        cv2.drawMarker(frames[frameNo], (int(mark[0], int(mark[1]))), color=[i*40 + 10, 0, 0], thickness=10,\ 
+                                       markerType= cv2.MARKER_TILTED_CROSS, line_type=cv2.LINE_AA, markerSize=2)
+
         for key, faceTrackId in self.asd.items():
             st, et = self.speechFaceTracks[key]['speech']
             faceTrack = self.faceTracks[faceTrackId]
