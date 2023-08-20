@@ -84,6 +84,9 @@ def npAngle(a, b, c):
     
     return np.degrees(angle)
 
+def getEyeDistance(landmarks):
+    return np.linalg.norm(landmarks[0] - landmarks[1])
+
 def getFaceProfile(landmarks):
     angR = npAngle(landmarks[0], landmarks[1], landmarks[2]) # Calculate the right eye angle
     angL = npAngle(landmarks[1], landmarks[0], landmarks[2])

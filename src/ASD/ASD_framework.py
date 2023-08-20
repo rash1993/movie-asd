@@ -10,7 +10,7 @@ import sys, os, cv2, subprocess
 import pickle as pkl
 from ASD.asd_utils import Distances, Similarity
 from ASD.speech_face_association import SpeechFaceAssociation
-from local_utils import readVideoFrames, writeToPickleFile, getFaceProfile
+from local_utils import readVideoFrames, writeToPickleFile, getFaceProfile, getEyeDistance
 from utils_cams import make_video
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr
@@ -104,7 +104,7 @@ class ASD():
                                                       self.guides,\
                                                       self.verbose)
         self.asd = speechFaceAssociation.handler(partitionLen)
-        self.offscreenSpeakercorrection2()
+        # self.offscreenSpeakercorrection2()
         self.offscreenSpeakercorrection()
         audioDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), modality='speech')
         faceDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), asd=self.asd, modality='face')
@@ -149,16 +149,18 @@ class ASD():
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
                     # draw markers at face landmarks
                     landms = np.array(box[-1]).reshape((-1, 2))
-                    faceProfile = getFaceProfile(landms)
-                    cv2.putText(frames[frameNo], faceProfile, (x2, y2 + 10), \
+                    # faceProfile = getFaceProfile(landms)
+                    landms[:,0]*=framesObj['width']
+                    landms[:,1]*=framesObj['height']
+                    eyeDistance = str(round(getEyeDistance(landms) , 2))
+                    cv2.putText(frames[frameNo], eyeDistance, (x2, y2 + 10), \
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
                     for i, mark in enumerate(landms):
-                        x = int(mark[0]*framesObj['width'])
-                        y = int(mark[1]*framesObj['height'])
+                        x = int(mark[0])
+                        y = int(mark[1])
                         cv2.drawMarker(frames[frameNo], (x, y), \
                                 color=(0,0,255), thickness=1, markerType=cv2.MARKER_CROSS, \
                                 markerSize=4)
-                    
         for key, faceTrackId in self.asd.items():
             st, et = self.speechFaceTracks[key]['speech']
             faceTrack = self.faceTracks[faceTrackId]
