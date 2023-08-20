@@ -9,6 +9,7 @@
 import cv2, subprocess, os, csv
 import pickle as pkl
 from tqdm import tqdm 
+import numpy as np
 
 def readVideoFrames(videoPath, res=(180, 360)):
     """method to read all the frames of a video file.
@@ -73,3 +74,24 @@ def shotDetect(videoPath, saveDir):
     del shots[0]
     shots = [[shot[0], float(shot[3]), float(shot[6])] for shot in shots]
     return shots
+
+def npAngle(a, b, c):
+    ba = a - b
+    bc = c - b 
+    
+    cosine_angle = np.dot(ba, bc)/(np.linalg.norm(ba)*np.linalg.norm(bc))
+    angle = np.arccos(cosine_angle)
+    
+    return np.degrees(angle)
+
+def getFaceProfile(landmarks):
+    angR = npAngle(landmarks[0], landmarks[1], landmarks[2]) # Calculate the right eye angle
+    angL = npAngle(landmarks[1], landmarks[0], landmarks[2])
+    if ((int(angR) in range(35, 57)) and (int(angL) in range(35, 58))):
+        predLabel='Frontal'
+    else: 
+        if angR < angL:
+            predLabel='Left Profile'
+        else:
+            predLabel='Right Profile'
+    return predLabel

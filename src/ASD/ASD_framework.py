@@ -10,7 +10,7 @@ import sys, os, cv2, subprocess
 import pickle as pkl
 from ASD.asd_utils import Distances, Similarity
 from ASD.speech_face_association import SpeechFaceAssociation
-from local_utils import readVideoFrames, writeToPickleFile
+from local_utils import readVideoFrames, writeToPickleFile, getFaceProfile
 from utils_cams import make_video
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr
@@ -147,6 +147,17 @@ class ASD():
                     # printing the name of the face track
                     cv2.putText(frames[frameNo], str(facetrackId), (x1, y1 - 10), \
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+                    # draw markers at face landmarks
+                    landms = np.array(box[-1]).reshape((-1, 2))
+                    faceProfile = getFaceProfile(landms)
+                    cv2.putText(frames[frameNo], faceProfile, (x2, y2 + 10), \
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+                    for i, mark in enumerate(landms):
+                        x = int(mark[0]*framesObj['width'])
+                        y = int(mark[1]*framesObj['height'])
+                        cv2.drawMarker(frames[frameNo], (x, y), \
+                                color=(0,0,255), thickness=1, markerType=cv2.MARKER_CROSS, \
+                                markerSize=4)
                     
         for key, faceTrackId in self.asd.items():
             st, et = self.speechFaceTracks[key]['speech']
@@ -160,7 +171,8 @@ class ASD():
                         x2 = int(round(box[3]*framesObj['width']))
                         y2 = int(round(box[4]*framesObj['height']))
                         cv2.rectangle(frames[frameNo], (x1, y1), (x2, y2), (0, 255, 0))
-                        
+        
+
         # printing the active speaker face track id on the frames
         for key, faceTrackId in self.asd.items():
             st, et = self.speechFaceTracks[key]['speech']
