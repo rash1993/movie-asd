@@ -16,8 +16,5 @@ pip install -r requirements.txt
 cd src
 python3 main.py --videoPath <path_to_video in mp4> --cacheDir <path to store the intermediate artifacts> --verbose
 ```
-## Example videos
 
-
-https://github.com/rash1993/movie-asd/assets/6943967/02968a0f-4ba3-481b-8d96-cc81dbc49751
 
