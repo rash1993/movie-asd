@@ -102,8 +102,8 @@ class ASD():
                                                       self.guides,\
                                                       self.verbose)
         self.asd = speechFaceAssociation.handler(partitionLen)
-        # self.offscreenSpeakercorrection2()
-        # self.offscreenSpeakercorrection()
+        self.offscreenSpeakercorrection2()
+        self.offscreenSpeakercorrection()
         # audioDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), modality='speech')
         # faceDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), asd=self.asd, modality='face')
         # corr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances, avg=False)

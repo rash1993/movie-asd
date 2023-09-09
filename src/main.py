@@ -6,10 +6,13 @@
  * @desc [description]
  */'''
 
-import argparse, sys, os
+import argparse, sys, os, subprocess
 sys.path.append('../')
+# sys.path.append('../')
 from preprocessor import Preprocessor
 from ASD.ASD_framework import ASD
+from TalkNet.TalkNet_wrapper import TalkNetWrapper
+
 
 if __name__ == '__main__':
     args = argparse.ArgumentParser()
@@ -22,21 +25,30 @@ if __name__ == '__main__':
     cacheDir = os.path.join(args.cacheDir, videoName)
     os.makedirs(cacheDir, exist_ok=True)
 
-    preprocessor = Preprocessor(args.videoPath,\
+    #change the fps of the video to 25
+    cache_video_path = os.path.join(cacheDir, os.path.basename(args.videoPath))
+    cmd = f"ffmpeg -y -i {args.videoPath} -filter:v fps=fps=25 {cache_video_path}"
+    subprocess.call(cmd, shell=True, stdout=None)
+    
+    
+    preprocessor = Preprocessor(cache_video_path,\
                                 cacheDir=cacheDir,\
                                 verbose=args.verbose)
     preprocessor.prep()
 
-    asdFramework = ASD(preprocessor.speechFaceTracks,\
-                       preprocessor.videoPrep.faceTracks,\
-                       preprocessor.videoPrep.faceTrackFeats,\
-                       preprocessor.audioPrep.speechEmbeddings,\
-                       cacheDir, guides=None, verbose=args.verbose, \
-                       marginalFaceTracks=preprocessor.speechFaceTracksMarginal)
-    if args.partitionLength == -1:
-        partitionLength = 'full'
-    else:
-        partitionLength = args.partitionLength
-    asdFramework.run(partitionLen=partitionLength)
-    asdFramework.visualizeASD(args.videoPath)
-    asdFramework.visualizeDistanceMatrices()
+    # asdFramework = ASD(preprocessor.speechFaceTracks,\
+    #                    preprocessor.videoPrep.faceTracks,\
+    #                    preprocessor.videoPrep.faceTrackFeats,\
+    #                    preprocessor.audioPrep.speechEmbeddings,\
+    #                    cacheDir, guides=None, verbose=args.verbose, \
+    #                    marginalFaceTracks=preprocessor.speechFaceTracksMarginal)
+    # if args.partitionLength == -1:
+    #     partitionLength = 'full'
+    # else:
+    #     partitionLength = args.partitionLength
+    # asdFramework.run(partitionLen=partitionLength)
+    # asdFramework.visualizeASD(args.videoPath)
+    # asdFramework.visualizeDistanceMatrices()
+    
+    talknet = TalkNetWrapper(args.videoPath, cacheDir)
+    talknet.run()
