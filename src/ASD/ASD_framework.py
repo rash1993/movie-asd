@@ -190,7 +190,7 @@ class ASD():
         videoSavePath = os.path.join(self.cacheDir, f'{videoName}_asdOut.mp4')
         wavPath = os.path.join(self.cacheDir, 'audio.wav')
         if not os.path.isfile(wavPath):
-            wavCmd = f'ffmpeg -y -nostdin -loglevel error -y -i {videoPath} \
+            wavCmd = f'ffmpeg -loglevel error -y -nostdin -loglevel error -y -i {videoPath} \
                 -ar 16k -ac 1 {wavPath}'
             subprocess.call(wavCmd, shell=True, stdout=False)
         
@@ -200,7 +200,7 @@ class ASD():
             video_writer.write(frame)
         video_writer.release()
         videoSavePathTmp = os.path.join(self.cacheDir, f'{videoName}_asdOut_tmp.mp4')
-        audio_video_merge_cmd  = f'ffmpeg -i {videoSavePath} -i {wavPath} -c:v copy -c:a aac {videoSavePathTmp}'
+        audio_video_merge_cmd  = f'ffmpeg -loglevel error -i {videoSavePath} -i {wavPath} -c:v copy -c:a aac {videoSavePathTmp}'
         subprocess.call(audio_video_merge_cmd, shell=True, stdout=False)
         os.rename(f'{videoSavePathTmp}', videoSavePath)
         # TODO: remove the tmp file

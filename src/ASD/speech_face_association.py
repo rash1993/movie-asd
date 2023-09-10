@@ -54,18 +54,21 @@ class SpeechFaceAssociation():
                 if len(tracks) == 0:
                     # not considering keys where no face tracks overlap
                     continue
-                guideScores_ = [[track[0], guidesPredScores[track[0]]] \
-                                    for track in tracks if guidesPredScores[track[0]] != 'nan']
-                guideScores_.sort(key=lambda x: x[1])
+                guideScores_ = [[track[0], guidesPredScores[key_][track[0]]] \
+                                    for track in tracks]
+                guideScores_.sort(key=lambda x: x[1], reverse=True)
                 asd[key_] = (
                     guideScores_[0][0]
                     if guideScores_
-                    else tracks[np.random.randint(0, len(tracks), size=1)[0]][0]
+                    # initializing wiht largest face
+                    else max(tracks, key=lambda x: self.getFaceTrackArea(x[0]))[0]
+                    # initializing with random face
+                    # else tracks[np.random.randint(0, len(tracks), size=1)[0]][0]
                 )
                 
                 # determining if positive guide
                 try:
-                    if guidesPredScores[asd[key_]] >= posTh:
+                    if guidesPredScores[key_][asd[key_]] >= posTh:
                         posGuides.append(key_)
                 except:
                     pass
@@ -73,6 +76,12 @@ class SpeechFaceAssociation():
                 # determining the negative guides for the speech segment
                 negGuides[key_] = [trackId for trackId, score in guideScores_ \
                                     if score < negTh] 
+                
+            removeKeys = []
+            for key_ in asd.keys():
+                    if asd[key_] in negGuides[key_]:
+                        removeKeys.append(key_)
+            asd = {k:v for k, v in asd.items() if k not in removeKeys}
         else:
             # randomly initializing the asd
             for key_ in speechKeys:
@@ -180,12 +189,14 @@ class SpeechFaceAssociation():
             print(f'negtive guided face tracks: {negGuidesFaceTracksCount}/{faceTracksCount}')
         # remove keys using the negative guides
         removeKeysCount = 0
+        removeKeys = []
         for key_ in asd.keys():
             trackIds = [track[0] for track in self.speechFaceTracks[key_]['face_tracks']\
                         if track[0] not in negGuides[key_]]
             if not len(trackIds):
-                del asd[key_]
+                removeKeys.append(key_)
                 removeKeysCount += 1
+        asd = {k:v for k, v in asd.items() if k not in removeKeys}
         
         speechKeys = list(asd.keys())
         lastCorr = 0.0

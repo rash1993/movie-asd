@@ -170,7 +170,7 @@ def make_video(im_fnames, fps, out_fname, sound_fname = None, keep_aud_file = Fa
     sound_flags_in = ('-i "%s"' % sound_fname) if sound_fname is not None else ''
     sound_flags_out =  '-acodec aac' if sound_fname is not None else ''
     #os.system('echo input file; cat %s' % input_file)
-    sys_check('ffmpeg -y -nostdin %s -r %f -loglevel error -safe 0 -f concat -i "%s" -pix_fmt yuv420p -vcodec h264 -strict -2 -y %s %s "%s"' \
+    sys_check('ffmpeg -y -nostdin %s -r %f -loglevel error -hide_banner -safe 0 -f concat -i "%s" -pix_fmt yuv420p -vcodec h264 -strict -2 -y %s %s "%s"' \
               % (sound_flags_in, fps, input_file, sound_flags_out, flags, out_fname))
 
   print (tmp_wav)

@@ -10,19 +10,23 @@ from audio_prep.audio_preprocessing import AudioPreProcessor
 from video_prep.video_preprocessing import VideoPreProcessor
 from local_utils import writeToPickleFile
 from ASD.asd_utils import Distances
+from TalkNet.TalkNet_wrapper import TalkNetWrapper
+import numpy as np
+import json
 
 class Preprocessor():
-    def __init__(self, videoPath, cacheDir=None, verbose=False):
+    def __init__(self, videoPath, cacheDir=None, verbose=False, talknet_flag=False):
         self.videoPath = videoPath
         self.videoName = os.path.basename(videoPath)[:-4]
         self.verbose = verbose
         if cacheDir is None:
             cacheDir = '../cache'
         self.cacheDir = cacheDir
+        self.talknet_flag = talknet_flag
         os.makedirs(self.cacheDir, exist_ok=True)
         self.audioPrep = AudioPreProcessor(self.videoPath, self.cacheDir, verbose=self.verbose)
         self.videoPrep = VideoPreProcessor(self.videoPath, self.cacheDir, verbose=self.verbose)
-    
+
     def getTemporallyOverlappingFaceTracks(self, faceTracks, speechSegments):
         
         def getFaceTrackTime(face_track):
@@ -115,6 +119,27 @@ class Preprocessor():
         # speechFaceTracksFile = os.path.join(self.cacheDir, 'speechFaceTracks.pkl')
         # writeToPickleFile(self.speechFaceTracks, speechFaceTracksFile)
 
+    def constructGuides(self, talknetscores):
+        guides = {}
+        for key in self.speechFaceTracks.keys():
+            guides[key] = {}
+            for faceTrack in self.speechFaceTracks[key]['face_tracks']:
+                faceTrackId, st, et = faceTrack
+                scores = [score for face, score in \
+                            zip(self.videoPrep.faceTracks[faceTrackId],\
+                                talknetscores[faceTrackId])\
+                            if (face[0] >= st) and (face[0] < et)]
+                guides[key][faceTrackId] = np.mean(scores)
+        json.dump(guides, open(os.path.join(self.cacheDir, 'talknet_guides.json'), 'w'))
+        all_scores = []
+        for key, item in talknetscores.items():
+            all_scores.extend(item)
+        all_scores = [s for s in all_scores if not np.isnan(float(s))]
+        posTh = np.percentile(all_scores, 90)
+        negTh = np.percentile(all_scores, 40)
+        print(f'Talknet posTh: {posTh} negTh: {negTh}')
+        self.guides = {'scores': guides, 'posTh': posTh, 'negTh': negTh}
+
     def prep(self):
         self.audioPrep.run()
         self.videoPrep.run()
@@ -124,3 +149,9 @@ class Preprocessor():
             self.cacheDir, verbose=self.verbose).faceDistances
         self.getPotentialActiveSpeakerFaceTracks(self.videoPrep.faceTracks,\
              self.audioPrep.speakerHomoSegments, faceTrackDistances)
+        if self.talknet_flag:
+            talknet = TalkNetWrapper(self.videoPath, self.cacheDir)
+            self.talknetscores = talknet.run()
+            self.constructGuides(self.talknetscores)
+        else:
+            self.guides = None
