@@ -31,6 +31,7 @@ python3 main.py --videoPath <path_to_video in mp4> --cacheDir <path to store the
 ```
 The above snippet will generate a video with active speakers faces bounded in a green bounding box while all other boxes in red bounding box. An example output video is shown below.
 ![](https://github.com/rash1993/movie-asd/blob/wacv/gif_v0.gif)
+
 Please cite the following works you use this frmaework.
 ```
 @ARTICLE{10102534,
