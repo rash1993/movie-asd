@@ -37,7 +37,7 @@ python3 main.py --videoPath <path_to_video in mp4> --cacheDir <path to store the
 ```
 The above snippet will generate a video with active speakers faces bounded in a green bounding box while all other boxes in red bounding box. An example output video is shown below.
 
-![](https://github.com/rash1993/movie-asd/gif_v0.gif)
+[](https://github.com/rash1993/movie-asd/gif_v0.gif)
 
 The improved performance with the use of `TalkNet` comes with increased processing time. In case of smaller videos (<5min) removing the field `--partitionLength` may improve performance with a slight increase in processing time. For the longer videos the `--partitionLength` is important for reasonable processing time and we recommend keeping it `50` is recommended.
 
