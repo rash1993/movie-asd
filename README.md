@@ -30,7 +30,7 @@ cd src
 python3 main.py --videoPath <path_to_video in mp4> --cacheDir <path to store the intermediate artifacts> --partitionLength 50 --talknet --verbose
 ```
 The above snippet will generate a video with active speakers faces bounded in a green bounding box while all other boxes in red bounding box. An example output video is shown below.
-![](https://github.com/rash1993/movie-asd/gif_v0.gif)
+![](https://github.com/rash1993/movie-asd/blob/wacv/gif_v0.gif)
 Please cite the following works you use this frmaework.
 ```
 @ARTICLE{10102534,
