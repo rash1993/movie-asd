@@ -6,7 +6,7 @@ scikit-image
 filterpy
 torchvision
 scenedetect==0.5.6.1
-nvidia-cudnn-cu11==8.5.0.96
-tensorflow==2.10
+nvidia-cudnn-cu11==8.6.0.163
+tensorflow
 gdown
 python_speech_features
