@@ -19,20 +19,21 @@ pip install -r requirements_cu_11_0.txt
 ```
 ## How to run
 The system runs best for the `*.mp4` formatted videos. 
-To use just the unsupervised cross-modal identitiy association for active speaker detection (CMIA) use the following:
+To use just the unsupervised cross-modal identity association for active speaker detection (CMIA) use the following:
 ```
 cd src
 python3 main.py --videoPath <path_to_video in mp4> --cacheDir <path to store the intermediate artifacts> --partitionLength 50 --verbose
 ```
-To run the setup with `TalkNet` as the guides:
+To run the setup with `TalkNet` as the guide:
 ```
 cd src
 python3 main.py --videoPath <path_to_video in mp4> --cacheDir <path to store the intermediate artifacts> --partitionLength 50 --talknet --verbose
 ```
-The above snippet will generate a video with active speakers faces bounded in a green bounding box while all other boxes in red bounding box. An example output video is shown below.
+The above snippet will generate a video with active speakers' faces bounded in a green bounding box while all other boxes are in the red bounding box. An example output video is shown below.
+
 ![](https://github.com/rash1993/movie-asd/blob/wacv/gif_v0.gif)
 
-Please cite the following works you use this frmaework.
+Please cite the following works if you use this framework.
 ```
 @ARTICLE{10102534,
   author={Sharma, Rahul and Narayanan, Shrikanth},
