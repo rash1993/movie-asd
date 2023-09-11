@@ -1,4 +1,5 @@
 # movie-asd
+
 Hi there! This repo provides the code and setup for 
 * [Cross-modal identity association (CMIA)](https://arxiv.org/abs/2209.11896) framework for active speaker detection. 
 * [Audio-visual activity guided CMIA for active speaker detection](https://ieeexplore.ieee.org/abstract/document/10102534).
@@ -6,6 +7,7 @@ Hi there! This repo provides the code and setup for
 This setup use the [TalkNet](https://github.com/TaoRuijie/TalkNet-ASD) as the source for audio-visual activity information. 
 
 For queries regarding the setup reach out to [rahul.sharma@usc.edu](mailto:rahul.sharma@usc.edu)
+
 ## Setup
 ```
 # Recommended cuda==11.3 (cuda==11.0 also works)
@@ -35,13 +37,13 @@ To run the setup with audio-visual activity information from `TalkNet` as the gu
 cd src
 python3 main.py --videoPath <path_to_video in mp4> --cacheDir <path to store the intermediate artifacts> --partitionLength 50 --talknet --verbose
 ```
-The above snippet will generate a video with active speakers faces bounded in a green bounding box while all other boxes in red bounding box. An example output video is shown below.
+The above snippet will generate a video with active speakers' faces bounded in a green bounding box while all other boxes are in the red bounding box. An example output video is shown below.
 
-![](https://github.com/rash1993/movie-asd/gif_v0.gif)
+![](https://github.com/rash1993/movie-asd/blob/wacv/gif_v0.gif)
 
 The improved performance with the use of `TalkNet` comes with increased processing time. In case of smaller videos (<5min) removing the field `--partitionLength` may improve performance with a slight increase in processing time. For the longer videos the `--partitionLength` is important for reasonable processing time and we recommend keeping it `50` is recommended.
 
-Please cite the following works you use this frmaework.
+Please cite the following works if you use this framework.
 ```
 @ARTICLE{10102534,
   author={Sharma, Rahul and Narayanan, Shrikanth},
