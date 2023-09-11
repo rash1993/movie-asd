@@ -55,7 +55,8 @@ class SpeechFaceAssociation():
                     # not considering keys where no face tracks overlap
                     continue
                 guideScores_ = [[track[0], guidesPredScores[key_][track[0]]] \
-                                    for track in tracks]
+                                    for track in tracks \
+                                    if not np.isnan(float(guidesPredScores[key_][track[0]]))]
                 guideScores_.sort(key=lambda x: x[1], reverse=True)
                 asd[key_] = (
                     guideScores_[0][0]
@@ -75,7 +76,7 @@ class SpeechFaceAssociation():
                 
                 # determining the negative guides for the speech segment
                 negGuides[key_] = [trackId for trackId, score in guideScores_ \
-                                    if score < negTh] 
+                                    if (score < negTh) and (not np.isnan(float(score )))] 
                 
             removeKeys = []
             for key_ in asd.keys():
@@ -111,7 +112,7 @@ class SpeechFaceAssociation():
                 print(f'optimizing the partition {partitionNum} of {len(partitions)}')
                 asd, posGuides, negGuides = self.initializeASD(partition)
                 asd = self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides)
-                asd = self.offscreenSpeakercorrection2(asd)
+                # asd = self.offscreenSpeakercorrection2(asd)
                 ASD.update(asd)
         else:
             asd, posGuides, negGuides = self.initializeASD(speechKeys)
@@ -152,8 +153,9 @@ class SpeechFaceAssociation():
                     faceDistanceVector = faceDistances[i]
                     newCorri = pearsonr(audioDistanceVector, faceDistanceVector)[0]
                     mdistances.append([trackId[0], newCorri - currCorri])
-            mdistances.sort(key=lambda x: x[1], reverse=True)
-            marginal_distances.append([key] + mdistances[0])
+            if len(mdistances):
+                mdistances.sort(key=lambda x: x[1], reverse=True)
+                marginal_distances.append([key] + mdistances[0])
         return marginal_distances
 
     def offscreenSpeakercorrection2(self, asd):

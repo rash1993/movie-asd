@@ -129,7 +129,11 @@ class Preprocessor():
                             zip(self.videoPrep.faceTracks[faceTrackId],\
                                 talknetscores[faceTrackId])\
                             if (face[0] >= st) and (face[0] < et)]
-                guides[key][faceTrackId] = np.mean(scores)
+                nonan_scores = [s for s in scores if not np.isnan(float(s))]
+                if nonan_scores:
+                    guides[key][faceTrackId] = np.mean(nonan_scores)
+                else:
+                    guides[key][faceTrackId] = 'nan'
         json.dump(guides, open(os.path.join(self.cacheDir, 'talknet_guides.json'), 'w'))
         all_scores = []
         for key, item in talknetscores.items():
@@ -150,8 +154,8 @@ class Preprocessor():
         self.getPotentialActiveSpeakerFaceTracks(self.videoPrep.faceTracks,\
              self.audioPrep.speakerHomoSegments, faceTrackDistances)
         if self.talknet_flag:
-            talknet = TalkNetWrapper(self.videoPath, self.cacheDir)
-            self.talknetscores = talknet.run()
+            talknet = TalkNetWrapper(self.videoPath, self.cacheDir, self.videoPrep.framesObj)
+            self.talknetscores = talknet.run(visualization=True)
             self.constructGuides(self.talknetscores)
         else:
             self.guides = None

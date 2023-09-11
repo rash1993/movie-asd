@@ -46,7 +46,7 @@ class VggFace2Embeddings():
     
     def extractEmbeddings(self, faceTracksList):
         crops, cropIDs = self.extractCrops(faceTracksList)
-        print(Counter(cropIDs))
+        # print(Counter(cropIDs))
         vggFace2Model = initialize_model()
         cropFeats = image_encoding(vggFace2Model, crops)
         faceTrackFeats = {}
