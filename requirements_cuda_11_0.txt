@@ -1,0 +1,12 @@
+https://github.com/pyannote/pyannote-audio/archive/refs/heads/develop.zip
+scipy
+matplotlib
+opencv-python
+scikit-image
+filterpy
+torchvision
+scenedetect==0.5.6.1
+nvidia-cudnn-cu11==8.5.0.96
+tensorflow==2.10
+gdown
+python_speech_features
