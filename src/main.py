@@ -11,6 +11,7 @@ sys.path.append('../')
 from preprocessor import Preprocessor
 from ASD.ASD_framework import ASD
 from TalkNet.TalkNet_wrapper import TalkNetWrapper
+from Diarize.diarize import Diarize
 import time
 
 if __name__ == '__main__':
@@ -20,6 +21,7 @@ if __name__ == '__main__':
     args.add_argument('--verbose', action='store_true', help='print the intermediate rocessing steps')
     args.add_argument('--partitionLength', type=int, default=-1, help='length of partition in number of speech segments')
     args.add_argument('--talknet', action='store_true', help='use the talknet as guides for CMIA')
+    args.add_argument('--diarize', action='store_true', help='flag to enable character diarization')
     args = args.parse_args()
     videoName = os.path.basename(args.videoPath)[:-4]
     cacheDir = os.path.join(args.cacheDir, videoName)
@@ -52,6 +54,9 @@ if __name__ == '__main__':
     else:
         partitionLength = args.partitionLength
     asdFramework.run(partitionLen=partitionLength)
-    asdFramework.visualizeASD(args.videoPath)
+    # asdFramework.visualizeASD(args.videoPath)
     asdFramework.visualizeDistanceMatrices()
     print(f'time elapsed: {time.time() - st}')
+
+    diarize = Diarize(asdFramework, cacheDir).run()
+    asdFramework.visualizeASD(args.videoPath, debug=True, charFaceIds=diarize) 

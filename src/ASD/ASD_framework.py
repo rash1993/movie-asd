@@ -67,7 +67,7 @@ class ASD():
         ax[1].imshow(faceDistances)
         plt.savefig(os.path.join(self.cacheDir, 'distance_matrix.png'), dpi=300)
 
-    def visualizeASD(self, videoPath, debug=False):
+    def visualizeASD(self, videoPath, debug=False, charFaceIds={}):
         framesFile = os.path.join(self.cacheDir, 'frames.pkl')
         if os.path.isfile(framesFile):
             framesObj = pkl.load(open(framesFile, 'rb'))
@@ -75,7 +75,6 @@ class ASD():
             framesObj = readVideoFrames(videoPath)
 
         frames = framesObj['frames']
-
         for facetrackId, faceTrack in self.faceTracks.items():
             for box in faceTrack:
                 frameNo = int(round(box[0]*framesObj['fps']))
@@ -89,6 +88,10 @@ class ASD():
                     if debug:
                         cv2.putText(frames[frameNo], str(facetrackId), (x1, y1 - 10), \
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+                        if facetrackId in charFaceIds.keys():
+                            cv2.putText(frames[frameNo], str(charFaceIds[facetrackId]), \
+                                        (x2 - 20, y2 - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, \
+                                        (255, 0, 0), 1)
                     # draw markers at face landmarks
                     # landms = np.array(box[-1]).reshape((-1, 2))
                     # # faceProfile = getFaceProfile(landms)

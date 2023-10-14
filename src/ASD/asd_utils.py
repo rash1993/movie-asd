@@ -68,6 +68,10 @@ class Distances():
                     face_i = asd[keyi]
                     face_j = asd[keyj]
                     distances[i,j] = self.faceDistances[face_i][face_j]
+                elif modality == 'face_raw':
+                    face_i = keyi
+                    face_j = keyj
+                    distances[i,j] = self.faceDistances[face_i][face_j]
                 else:
                     print('!!!!!!!!!! MODALITY NOT DEFINED !!!!!!!!!!')
         return distances
