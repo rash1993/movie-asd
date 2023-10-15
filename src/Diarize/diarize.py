@@ -80,17 +80,79 @@ class Diarize():
         cluster_Ids = self.assignFacesToClusters(faceClusterer.labels_, keys)
         self.asdClusters = {key: id for key, id in zip(keys, cluster_Ids)}
     
+    def speechInfo(self):
+        # asd keys
+        keys = self.pipe.asd.keys()
+        speechDistanceMatrix = self.pipe.distances.\
+                               computeDistanceMatrix(keys, \
+                                                     modality='speech')
+        
+        faceDistanceMultiplier = {}
+        for i, keyi in enumerate(keys):
+            faceKeyi = self.pipe.asd[keyi]
+            faceDistanceMultiplier[faceKeyi] = {}
+            for j, keyj in enumerate(keys):
+                faceKeyj = self.pipe.asd[keyj]
+                if faceKeyj in faceDistanceMultiplier[faceKeyi].keys():
+                    faceDistanceMultiplier[faceKeyi][faceKeyj].append(speechDistanceMatrix[i, j])
+                else:
+                    faceDistanceMultiplier[faceKeyi][faceKeyj] = [speechDistanceMatrix[i, j]]
+        th_same = 0.2
+        th_notsame = 0.6
+        for keyi in faceDistanceMultiplier.keys():
+            for keyj in faceDistanceMultiplier[keyi].keys():
+                multiplier = np.mean(faceDistanceMultiplier[keyi][keyj])
+                if multiplier >= th_notsame:
+                    multiplier = min(4, np.exp(10*(multiplier - th_notsame)))
+                elif multiplier <= th_same:
+                    multiplier = max(0.25, np.exp(10*(multiplier - th_same)))
+                else:
+                    multiplier = 1
+                faceDistanceMultiplier[keyi][keyj] = multiplier
+
+        # make sure the faceDistance multiplier is a square matrix
+        for keyi in faceDistanceMultiplier.keys():
+            for keyj in faceDistanceMultiplier[keyi].keys():
+                try:
+                    faceDistanceMultiplier[keyi][keyj] = faceDistanceMultiplier[keyj][keyi]
+                except:
+                    faceDistanceMultiplier[keyj][keyi] = faceDistanceMultiplier[keyi][keyj]
+        return faceDistanceMultiplier
 
     def clusterFaces(self):
+
         # use all the faces
         keys = list(self.faceFeatures.keys())
         distanceMatrix = self.pipe.distances.computeDistanceMatrix(keys, modality='face_raw')
         plotsDir = os.path.join(self.cacheDir, 'plots')
         os.makedirs(plotsDir, exist_ok=True)
         plt.clf()
-        plt.imshow(distanceMatrix)
+        plt.imshow(distanceMatrix, vmin=0, vmax=2)
         plt.colorbar()
         plt.savefig(os.path.join(plotsDir, 'all_faces.png'), dpi=300)
+
+        # incorporate speech info
+        print(np.sum(distanceMatrix > 1.0))
+        useSpeechInfo = True
+        if useSpeechInfo:
+            faceDistanceMultiplier = self.speechInfo()
+            distanceMatrix = self.pipe.distances.computeDistanceMatrix(keys, modality='face_raw', return_dict=True)
+            for keyi in faceDistanceMultiplier.keys():
+                for keyj in faceDistanceMultiplier[keyi].keys():
+                    distanceMatrix[keyi][keyj] *= faceDistanceMultiplier[keyi][keyj]
+        
+            # construct the distance matrix from dict format
+            distanceMatrix_ = np.zeros((len(keys), len(keys)))
+            for i, keyi in enumerate(keys):
+                for j, keyj in enumerate(keys):
+                    distanceMatrix_[i,j] = distanceMatrix[keyi][keyj]
+            distanceMatrix = distanceMatrix_
+            plt.clf()
+            plt.imshow(distanceMatrix, vmin=0, vmax=2)
+            plt.colorbar()
+            plt.savefig(os.path.join(plotsDir, 'all_faces_speech_info.png'), dpi=300)
+
+        # constraint: distance between the temporally overlapping facetracks is 1.0 (max od the distance matrix)
         for i, keyi in enumerate(keys):
             facei = keyi
             for j, keyj in enumerate(keys):
@@ -98,15 +160,18 @@ class Diarize():
                 if facei == facej:
                     continue
                 if self.faceTrackOverlap(facej, facei) > 0:
+                    distanceMatrix[i,j] = np.max(distanceMatrix)
 
-                    distanceMatrix[i,j] = 1.0
         plt.clf()
-        plt.imshow(distanceMatrix)
+        plt.imshow(distanceMatrix, vmin=0, vmax=2)
         plt.colorbar()
         plt.savefig(os.path.join(plotsDir, 'all_faces_temporal_overlap_fixed.png'), dpi=300)
         
         # TODO: use the transformation of the speech distance matrix as a multiplier to the FD
         
+        # distanceMatrix = 1 - distanceMatrix
+        delta = 10
+        distanceMatrix = np.exp(- distanceMatrix ** 2 / (2. *delta ** 2))
         faceClusterer = AffinityPropagation(damping=0.5).fit(distanceMatrix)
         print(faceClusterer.labels_)
         self.faceClusters = {key:clusterId for key, clusterId in zip(keys, faceClusterer.labels_)}
@@ -121,7 +186,7 @@ class Diarize():
         
         distanceMatrix = self.pipe.distances.computeDistanceMatrix(arranged_keys, modality='face_raw')
         plt.clf()
-        plt.imshow(distanceMatrix)
+        plt.imshow(distanceMatrix, vmin=0, vmax=2)
         plt.colorbar()
         plt.savefig(os.path.join(plotsDir, 'all_faces_clustered_keys.png'), dpi=300)
 

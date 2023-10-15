@@ -57,21 +57,35 @@ class Distances():
                     self.faceDistances[keyj][keyi] = self.faceDistances[keyi][keyj]
         writeToPickleFile(self.faceDistances, fileName)
 
-    def computeDistanceMatrix(self, keys, asd=None, modality='face'):
+    def computeDistanceMatrix(self, keys, asd=None, modality='face', return_dict=False):
         distances = np.empty((len(keys), len(keys)))
+        if return_dict: 
+            distances = {}
         for i, keyi  in enumerate(keys):
+            if return_dict:
+                distances[keyi] = {}
             for j, keyj in enumerate(keys):
                 if modality == 'speech':
-                    distances[i,j] = cdist(self.speechFeatures[keyi].reshape(1, -1), \
+                    distance= cdist(self.speechFeatures[keyi].reshape(1, -1), \
                         self.speechFeatures[keyj].reshape(1, -1), metric='cosine')[0,0]
+                    if return_dict:
+                        distances[keyi][keyj] = distance
+                    else:
+                        distances [i,j] = distance
                 elif modality == 'face':
                     face_i = asd[keyi]
                     face_j = asd[keyj]
-                    distances[i,j] = self.faceDistances[face_i][face_j]
+                    if return_dict:
+                        distances[keyi][keyj] = self.faceDistances[face_i][face_j]
+                    else:
+                        distances[i,j] = self.faceDistances[face_i][face_j]
                 elif modality == 'face_raw':
                     face_i = keyi
                     face_j = keyj
-                    distances[i,j] = self.faceDistances[face_i][face_j]
+                    if return_dict:
+                        distances[keyi][keyj] = self.faceDistances[face_i][face_j]
+                    else:
+                        distances[i,j] = self.faceDistances[face_i][face_j]
                 else:
                     print('!!!!!!!!!! MODALITY NOT DEFINED !!!!!!!!!!')
         return distances
