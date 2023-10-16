@@ -119,8 +119,28 @@ class Diarize():
                     faceDistanceMultiplier[keyj][keyi] = faceDistanceMultiplier[keyi][keyj]
         return faceDistanceMultiplier
 
-    def clusterFaces(self):
+    def combineFaceClustersUsingSpeech(self, faceClusters):
+        # faceIdToCluster = {value: key for key, value in faceClusters.items()}
+        
+        faceClusterSpeechRep = {key: [] for key in list(set(list(faceClusters.values())))}
+        for speechKey, faceKey in self.pipe.asd.items():
+            faceClusterSpeechRep[faceClusters[faceKey]].append(self.pipe.speechFeatures[speechKey].numpy().reshape(-1))
+        faceClusterSpeechRep = {key: np.mean(np.array(value), axis=0) \
+                                for key, value in faceClusterSpeechRep.items()}
+        faceClusterSpeechDistanceMatrix = np.zeros((len(faceClusterSpeechRep.keys()), \
+                                                   len(faceClusterSpeechRep.keys())))
+        keys = list(faceClusterSpeechRep.keys())
+        for i, keyi in enumerate(keys):
+            for j, keyj in enumerate(keys):
+                faceClusterSpeechDistanceMatrix[i,j] = cdist(faceClusterSpeechRep[keyi].reshape(1, -1),\
+                                                             faceClusterSpeechRep[keyj].reshape(1, -1),\
+                                                             metric='cosine')[0,0]
+        
+        
+        
+        return faceClusterSpeechDistanceMatrix
 
+    def clusterFaces(self):
         # use all the faces
         keys = list(self.faceFeatures.keys())
         distanceMatrix = self.pipe.distances.computeDistanceMatrix(keys, modality='face_raw')
@@ -133,7 +153,7 @@ class Diarize():
 
         # incorporate speech info
         print(np.sum(distanceMatrix > 1.0))
-        useSpeechInfo = True
+        useSpeechInfo = False
         if useSpeechInfo:
             faceDistanceMultiplier = self.speechInfo()
             distanceMatrix = self.pipe.distances.computeDistanceMatrix(keys, modality='face_raw', return_dict=True)
@@ -173,7 +193,6 @@ class Diarize():
         delta = 10
         distanceMatrix = np.exp(- distanceMatrix ** 2 / (2. *delta ** 2))
         faceClusterer = AffinityPropagation(damping=0.5).fit(distanceMatrix)
-        print(faceClusterer.labels_)
         self.faceClusters = {key:clusterId for key, clusterId in zip(keys, faceClusterer.labels_)}
 
         # arrange the keys according to clusters
@@ -190,6 +209,12 @@ class Diarize():
         plt.colorbar()
         plt.savefig(os.path.join(plotsDir, 'all_faces_clustered_keys.png'), dpi=300)
 
+        # combine the face clusters based on speech representations
+        faceClustererSpeechDistanceMatrix = self.combineFaceClustersUsingSpeech(self.faceClusters)
+        plt.clf()
+        plt.imshow(faceClustererSpeechDistanceMatrix)
+        plt.colorbar()
+        plt.savefig(os.path.join(plotsDir, 'face_clusters_speech_distances.png'), dpi=300)
     def run(self):
         # self.clusterASD()
         self.clusterFaces()
