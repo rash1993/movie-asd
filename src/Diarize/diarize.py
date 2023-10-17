@@ -6,6 +6,50 @@ import random, os
 from collections import defaultdict
 random.seed(1010)
 
+class Graph:
+        # init function to declare class variables
+        def __init__(self, adj):
+                matrixFlag = True
+                N = len(adj)
+                for i in adj:
+                        if len(i) != N:
+                                matrixFlag = False
+                                break
+                if matrixFlag:
+                        self.adj = [[idx for idx, ele in enumerate(row) if ele >0 ] for row in adj]
+                else:
+                        self.adj = adj
+                # print(self.adj)
+
+        def DFSUtil(self, temp, v, visited):
+
+                # Mark the current vertex as visited
+                visited[v] = True
+
+                # Store the vertex to list
+                temp.append(v)
+
+                # Repeat for all vertices adjacent
+                # to this vertex v
+                for i in self.adj[v]:
+                        if visited[i] == False:
+
+                                # Update the list
+                                temp = self.DFSUtil(temp, i, visited)
+                return temp
+
+        # Method to retrieve connected components
+        # in an undirected graph
+        def connectedComponents(self):
+                visited = []
+                cc = []
+                for i in range(len(self.adj)):
+                        visited.append(False)
+                for v in range(len(self.adj)):
+                        if visited[v] == False:
+                                temp = []
+                                cc.append(self.DFSUtil(temp, v, visited))
+                return cc
 
 class Diarize():
     def __init__(self, asdFramework, cacheDir):
@@ -136,9 +180,17 @@ class Diarize():
                                                              faceClusterSpeechRep[keyj].reshape(1, -1),\
                                                              metric='cosine')[0,0]
         
-        
-        
-        return faceClusterSpeechDistanceMatrix
+        th = 0.2
+        adj = faceClusterSpeechDistanceMatrix < th
+        adj = adj.astype(int)
+        connected_components = Graph(adj).connectedComponents()
+        clusterMap = {}
+        for i, components in enumerate(connected_components):
+            for cluster in components:
+                clusterMap[cluster] = i
+        for key in faceClusters:
+            faceClusters[key] = clusterMap[faceClusters[key]]
+        return faceClusters
 
     def clusterFaces(self):
         # use all the faces
@@ -187,8 +239,6 @@ class Diarize():
         plt.colorbar()
         plt.savefig(os.path.join(plotsDir, 'all_faces_temporal_overlap_fixed.png'), dpi=300)
         
-        # TODO: use the transformation of the speech distance matrix as a multiplier to the FD
-        
         # distanceMatrix = 1 - distanceMatrix
         delta = 10
         distanceMatrix = np.exp(- distanceMatrix ** 2 / (2. *delta ** 2))
@@ -205,16 +255,26 @@ class Diarize():
         
         distanceMatrix = self.pipe.distances.computeDistanceMatrix(arranged_keys, modality='face_raw')
         plt.clf()
-        plt.imshow(distanceMatrix, vmin=0, vmax=2)
+        plt.imshow(distanceMatrix)
         plt.colorbar()
         plt.savefig(os.path.join(plotsDir, 'all_faces_clustered_keys.png'), dpi=300)
 
         # combine the face clusters based on speech representations
-        faceClustererSpeechDistanceMatrix = self.combineFaceClustersUsingSpeech(self.faceClusters)
+        self.faceClusters = self.combineFaceClustersUsingSpeech(self.faceClusters)
+        # arrange the keys according to clusters
+        clusters = defaultdict(lambda: [])
+        for key, id in self.faceClusters.items():
+            clusters[id].append(key)
+        arranged_keys = []
+        for value in clusters.values():
+            arranged_keys.extend(value)
+        
+        distanceMatrix = self.pipe.distances.computeDistanceMatrix(arranged_keys, modality='face_raw')
         plt.clf()
-        plt.imshow(faceClustererSpeechDistanceMatrix)
+        plt.imshow(distanceMatrix)
         plt.colorbar()
-        plt.savefig(os.path.join(plotsDir, 'face_clusters_speech_distances.png'), dpi=300)
+        plt.savefig(os.path.join(plotsDir, 'all_faces_clustered_keys_combined.png'), dpi=300)
+
     def run(self):
         # self.clusterASD()
         self.clusterFaces()
