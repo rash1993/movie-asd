@@ -167,10 +167,12 @@ class Diarize():
         # faceIdToCluster = {value: key for key, value in faceClusters.items()}
         
         faceClusterSpeechRep = {key: [] for key in list(set(list(faceClusters.values())))}
+        print(faceClusterSpeechRep.keys())
         for speechKey, faceKey in self.pipe.asd.items():
             faceClusterSpeechRep[faceClusters[faceKey]].append(self.pipe.speechFeatures[speechKey].numpy().reshape(-1))
+        noSpeechKeys = [key for key, value in faceClusterSpeechRep.items() if len(value) == 0]
         faceClusterSpeechRep = {key: np.mean(np.array(value), axis=0) \
-                                for key, value in faceClusterSpeechRep.items()}
+                                for key, value in faceClusterSpeechRep.items() if key not in noSpeechKeys}
         faceClusterSpeechDistanceMatrix = np.zeros((len(faceClusterSpeechRep.keys()), \
                                                    len(faceClusterSpeechRep.keys())))
         keys = list(faceClusterSpeechRep.keys())
@@ -185,10 +187,20 @@ class Diarize():
         adj = adj.astype(int)
         connected_components = Graph(adj).connectedComponents()
         clusterMap = {}
-        for i, components in enumerate(connected_components):
+        for components in connected_components:
+            # finding a new cluster id for the connected components
+            for i in range(1000):
+                if i in list(clusterMap.keys()) + noSpeechKeys:
+                    continue
+                else:
+                    cluster_id = i
+                    break
             for cluster in components:
-                clusterMap[cluster] = i
-        for key in faceClusters:
+                clusterMap[cluster] = cluster_id
+        for cluster in noSpeechKeys:
+            clusterMap[cluster] = cluster
+        print(clusterMap)
+        for key in faceClusters.keys():
             faceClusters[key] = clusterMap[faceClusters[key]]
         return faceClusters
 
