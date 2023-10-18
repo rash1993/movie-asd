@@ -163,6 +163,15 @@ class Diarize():
                     faceDistanceMultiplier[keyj][keyi] = faceDistanceMultiplier[keyi][keyj]
         return faceDistanceMultiplier
 
+    def getConnectedComponents(self, adj, keys):
+        assert len(adj) == len(keys), f'mismatch in adj {len(adj)} and keys {len(keys)}'
+        connected_components = Graph(adj).connectedComponents()
+        # covert connected adjacency indexes to group of keys
+        for component in connected_components:
+             for i, item in enumerate(component):
+                  component[i] = keys[item]
+        return connected_components
+
     def combineFaceClustersUsingSpeech(self, faceClusters):
         # faceIdToCluster = {value: key for key, value in faceClusters.items()}
         
@@ -171,8 +180,10 @@ class Diarize():
         for speechKey, faceKey in self.pipe.asd.items():
             faceClusterSpeechRep[faceClusters[faceKey]].append(self.pipe.speechFeatures[speechKey].numpy().reshape(-1))
         noSpeechKeys = [key for key, value in faceClusterSpeechRep.items() if len(value) == 0]
+        print(noSpeechKeys)
         faceClusterSpeechRep = {key: np.mean(np.array(value), axis=0) \
                                 for key, value in faceClusterSpeechRep.items() if key not in noSpeechKeys}
+        
         faceClusterSpeechDistanceMatrix = np.zeros((len(faceClusterSpeechRep.keys()), \
                                                    len(faceClusterSpeechRep.keys())))
         keys = list(faceClusterSpeechRep.keys())
@@ -185,22 +196,23 @@ class Diarize():
         th = 0.2
         adj = faceClusterSpeechDistanceMatrix < th
         adj = adj.astype(int)
-        connected_components = Graph(adj).connectedComponents()
-        clusterMap = {}
+        # TODO: correct the adjcency correspondences
+        connected_components = self.getConnectedComponents(adj, list(faceClusterSpeechRep.keys()))
+        # print(connected_components)
+        clusterMap = {key: key for key in noSpeechKeys}
         for components in connected_components:
             # finding a new cluster id for the connected components
             for i in range(1000):
-                if i in list(clusterMap.keys()) + noSpeechKeys:
+                if i in list(clusterMap.keys()):
                     continue
                 else:
                     cluster_id = i
                     break
             for cluster in components:
                 clusterMap[cluster] = cluster_id
-        for cluster in noSpeechKeys:
-            clusterMap[cluster] = cluster
-        print(clusterMap)
+        # print(clusterMap)
         for key in faceClusters.keys():
+            # if faceClusters[key] in clusterMap.keys():
             faceClusters[key] = clusterMap[faceClusters[key]]
         return faceClusters
 
@@ -216,7 +228,6 @@ class Diarize():
         plt.savefig(os.path.join(plotsDir, 'all_faces.png'), dpi=300)
 
         # incorporate speech info
-        print(np.sum(distanceMatrix > 1.0))
         useSpeechInfo = False
         if useSpeechInfo:
             faceDistanceMultiplier = self.speechInfo()
