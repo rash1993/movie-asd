@@ -223,7 +223,7 @@ class Diarize():
         plotsDir = os.path.join(self.cacheDir, 'plots')
         os.makedirs(plotsDir, exist_ok=True)
         plt.clf()
-        plt.imshow(distanceMatrix, vmin=0, vmax=2)
+        plt.imshow(distanceMatrix)
         plt.colorbar()
         plt.savefig(os.path.join(plotsDir, 'all_faces.png'), dpi=300)
 
@@ -243,7 +243,7 @@ class Diarize():
                     distanceMatrix_[i,j] = distanceMatrix[keyi][keyj]
             distanceMatrix = distanceMatrix_
             plt.clf()
-            plt.imshow(distanceMatrix, vmin=0, vmax=2)
+            plt.imshow(distanceMatrix)
             plt.colorbar()
             plt.savefig(os.path.join(plotsDir, 'all_faces_speech_info.png'), dpi=300)
 
