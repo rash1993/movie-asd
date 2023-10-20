@@ -98,3 +98,11 @@ def getFaceProfile(landmarks):
         else:
             predLabel='Right Profile'
     return predLabel
+
+def getTemporalOverlap(trackA, trackB):
+    startA = trackA[0][0]
+    endA = trackA[-1][0]
+    startB = trackB[0][0]
+    endB = trackB[-1][0]
+    overlap = min(endA, endB) - max(startA, startB)
+    return overlap

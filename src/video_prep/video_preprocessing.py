@@ -6,12 +6,12 @@
  * @desc [description]
  */'''
 import sys, os, cv2
+import pickle as pkl 
 sys.path.append('../')
 sys.path.append('../../')
-from local_utils import readVideoFrames, writeToPickleFile
-import pickle as pkl 
+from local_utils import readVideoFrames, writeToPickleFile, getTemporalOverlap
+from tqdm import tqdm
 from video_prep.retina_face import RetinaFaceWithSortTracker
-from utils_cams import make_video
 from video_prep.vggFace2_embeddings import VggFace2Embeddings
 from video_prep.yolov8_with_sort import YoloWithSortTracker
 
@@ -85,6 +85,39 @@ class VideoPreProcessor():
                                                     self.framesObj)
             self.bodyTracks = self.bodyDetector.run()
             writeToPickleFile(self.bodyTracks, bodyTracksFilePath)
+    
+    def mapBodyFace(self):
+        shotWiseFaceTracks = {}
+        shotWiseBodyTrack = {}
+        self.FaceBodyMap = {} # for every face there will be body track
+
+        for faceTrack in self.faceTracks.keys():
+            shotId = faceTrack.split('_')[0]
+            if shotId in shotWiseFaceTracks.keys():
+                shotWiseFaceTracks[shotId].append(faceTrack)
+            else:
+                shotWiseFaceTracks[shotId] = [faceTrack]
+        
+        for bodyTrack in self.bodyTracks.keys():
+            shotId = bodyTrack.split('_')[0]
+            if shotId in shotWiseBodyTrack.keys():
+                shotWiseBodyTrack[shotId].append(bodyTrack)
+            else:
+                shotWiseBodyTrack[shotId] = [bodyTrack]
+
+        # TODO: Combine body tracks when they have same face track associated
+        # In each shot, assigning a bodyTrack to each FaceTrack
+        for shotId, faceTracks in tqdm(shotWiseFaceTracks.items()):
+            if shotId not in shotWiseBodyTrack.keys():
+                continue
+            bodyTracks = shotWiseBodyTrack[shotId]
+            for faceTrack in faceTracks:
+                overlaps = []
+                for bodyTrack in bodyTracks:
+                    overlaps.append([bodyTrack, \
+                                     getTemporalOverlap(self.faceTracks[faceTrack], \
+                                                        self.bodyTracks[bodyTrack])])
+                self.FaceBodyMap[faceTrack] = max(overlaps, key=lambda x:x[1])[0]
 
     def visualizeFaceTracks(self):
         for trackID, boxes in self.faceTracks.items():  
