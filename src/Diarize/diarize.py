@@ -1,3 +1,11 @@
+'''/**
+ * @author Rahul Sharma
+ * @email rahul.sharma@usc.edu
+ * @create date 2023-10-19 20:54:25
+ * @modify date 2023-10-19 20:54:25
+ * @desc [description]
+ */'''
+
 import numpy as np
 from sklearn.cluster import DBSCAN, AffinityPropagation
 from scipy.spatial.distance import cdist
