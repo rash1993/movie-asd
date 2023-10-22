@@ -99,10 +99,31 @@ def getFaceProfile(landmarks):
             predLabel='Right Profile'
     return predLabel
 
-def getTemporalOverlap(trackA, trackB):
-    startA = trackA[0][0]
-    endA = trackA[-1][0]
-    startB = trackB[0][0]
-    endB = trackB[-1][0]
-    overlap = min(endA, endB) - max(startA, startB)
-    return overlap
+def inside(box1, box2):
+  """Calculates the intersection over union of two bounding boxes.
+
+  Args:
+    box1: A list of four numbers [x1, y1, x2, y2] representing the coordinates of the first bounding box.
+    box2: A list of four numbers [x1, y1, x2, y2] representing the coordinates of the second bounding box.
+
+  Returns:
+    The IoU of the two bounding boxes.
+  """
+
+  # Get the coordinates of the intersection rectangle.
+  x1 = max(box1[0], box2[0])
+  y1 = max(box1[1], box2[1])
+  x2 = min(box1[2], box2[2])
+  y2 = min(box1[3], box2[3])
+
+  # If the intersection is empty, return 0.
+  if x1 > x2 or y1 > y2:
+    return 0
+
+  # Calculate the area of the intersection rectangle.
+  intersection_area = (x2 - x1) * (y2 - y1)
+  box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
+  return intersection_area / box1_area
+
+def boxArea(box):
+    return (box[2] - box[0])*(box[3] - box[1])
