@@ -6,7 +6,7 @@ Hi there! This repo provides the code and setup for
 
 This setup use the [TalkNet](https://github.com/TaoRuijie/TalkNet-ASD) as the source for audio-visual activity information. 
 
-For queries regarding the setup reach out to [rahul.sharma@usc.edu](mailto:rahul.sharma@usc.edu)
+For a quick read on the technical aspects and video illustrations refer to the [blog on medium](https://medium.com/@rahulsharma-sail/unveiling-the-future-of-media-analysis-revolutionizing-active-speaker-detection-in-the-digital-age-a63316ebae42?sk=d4fd94a03593ad2613f2591fb6106c0a). For queries regarding the setup reach out to [rahul.sharma@usc.edu](mailto:rahul.sharma@usc.edu)
 
 ## Setup
 ```
