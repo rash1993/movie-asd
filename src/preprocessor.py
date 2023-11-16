@@ -155,7 +155,7 @@ class Preprocessor():
              self.audioPrep.speakerHomoSegments, faceTrackDistances)
         if self.talknet_flag:
             talknet = TalkNetWrapper(self.videoPath, self.cacheDir, self.videoPrep.framesObj)
-            self.talknetscores = talknet.run(visualization=False)
+            self.talknetscores = talknet.run(self.videoPrep.faceTracks ,visualization=False)
             self.constructGuides(self.talknetscores)
         else:
             self.guides = None

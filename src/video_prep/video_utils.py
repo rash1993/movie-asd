@@ -117,6 +117,7 @@ def constrain_body_tracks(faceTracks, bodyTracks, fps):
     return bodyTracksOut
     
 def body_face_consistency(faceTracks, bodyTracks, framesObj):
+    faceBodyMap = mapBodyFace(faceTracks, bodyTracks, framesObj)
     faceTracks, bodyTracks, faceBodyMap = remove_redundant_tracks(faceTracks, bodyTracks, faceBodyMap)
     bodyFaceMap = mapBodyFace(bodyTracks, faceTracks, framesObj)
     bodyTracks, faceTracks, bodyFaceMap = remove_redundant_tracks(bodyTracks, faceTracks, bodyFaceMap)
