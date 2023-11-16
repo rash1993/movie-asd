@@ -10,12 +10,15 @@ import pickle as pkl
 import numpy as np
 sys.path.append('../')
 sys.path.append('../../')
-from local_utils import readVideoFrames, writeToPickleFile, inside
+from local_utils import readVideoFrames, writeToPickleFile, plot_tracks, writeVideo
 from tqdm import tqdm
 from video_prep.retina_face import RetinaFaceWithSortTracker
 from video_prep.vggFace2_embeddings import VggFace2Embeddings
 from video_prep.yolov8_with_sort import YoloWithSortTracker
 from video_prep.dinov2_embeddings import DinoV2Embeddings
+from video_prep.video_utils import body_face_consistency
+
+
 
 class VideoPreProcessor():
     def __init__(self, videoPath, cacheDir, faceDetectorName='retinaFace', verbose=False):
@@ -101,71 +104,82 @@ class VideoPreProcessor():
         self.faceBodyMap[faceTracksGroup[0]] = bodyTrack
         # print(len(self.faceTracks.keys()), len(self.faceBodyMap.keys()))
 
-    def mapBodyFace(self):
 
-        def getNumOverlaps(faceTrack, bodyTrack):
-            faceTrack = {int(round(b[0]*self.framesObj['fps'])): b for b in faceTrack}
-            bodyTrack = {int(round(b[0]*self.framesObj['fps'])): b for b in bodyTrack}
-            numOverlaps = 0
-            for ts, faceBox in faceTrack.items():
-                if ts in bodyTrack.keys():
-                    numOverlaps += inside(faceBox[1:5], bodyTrack[ts][1:5]) 
-            return numOverlaps
-        shotWiseFaceTracks = {}
-        shotWiseBodyTrack = {}
-        self.faceBodyMap = {} # for every face there will be body track
+    def bodyFaceConsistency(self):
+        self.faceTracks, self.bodyTracks = body_face_consistency(self.faceTracks, self.bodyTracks, self.framesObj)
 
-        for faceTrack in self.faceTracks.keys():
-            shotId = faceTrack.split('_')[0]
-            if shotId in shotWiseFaceTracks.keys():
-                shotWiseFaceTracks[shotId].append(faceTrack)
-            else:
-                shotWiseFaceTracks[shotId] = [faceTrack]
+
+        # faceBodyMap = mapBodyFace(self.faceTracks, self.bodyTracks, self.framesObj)
+        # faceTracks, bodyTracks, faceBodyMap = remove_redundant_tracks(faceTracks, bodyTracks, faceBodyMap)
+        # bodyFaceMap = mapBodyFace(bodyTracks, faceTracks, framesObj)
+        # bodyTracks, faceTracks, bodyFaceMap = remove_redundant_tracks(bodyTracks, faceTracks, bodyFaceMap)
+        # faceBodyMap = mapBodyFace(faceTracks, bodyTracks, framesObj)
+        # faceTracks, bodyTracks, faceBodyMap = remove_redundant_tracks(faceTracks, bodyTracks, faceBodyMap)
+        # faceTracks, bodyTracks = combine_track_names(faceTracks, bodyTracks, faceBodyMap)
+
+        # def getNumOverlaps(faceTrack, bodyTrack):
+        #     faceTrack = {int(round(b[0]*self.framesObj['fps'])): b for b in faceTrack}
+        #     bodyTrack = {int(round(b[0]*self.framesObj['fps'])): b for b in bodyTrack}
+        #     numOverlaps = 0
+        #     for ts, faceBox in faceTrack.items():
+        #         if ts in bodyTrack.keys():
+        #             numOverlaps += inside(faceBox[1:5], bodyTrack[ts][1:5]) 
+        #     return numOverlaps
+        # shotWiseFaceTracks = {}
+        # shotWiseBodyTrack = {}
+        # self.faceBodyMap = {} # for every face there will be body track
+
+        # for faceTrack in self.faceTracks.keys():
+        #     shotId = faceTrack.split('_')[0]
+        #     if shotId in shotWiseFaceTracks.keys():
+        #         shotWiseFaceTracks[shotId].append(faceTrack)
+        #     else:
+        #         shotWiseFaceTracks[shotId] = [faceTrack]
         
-        for bodyTrack in self.bodyTracks.keys():
-            shotId = bodyTrack.split('_')[0]
-            if shotId in shotWiseBodyTrack.keys():
-                shotWiseBodyTrack[shotId].append(bodyTrack)
-            else:
-                shotWiseBodyTrack[shotId] = [bodyTrack]
+        # for bodyTrack in self.bodyTracks.keys():
+        #     shotId = bodyTrack.split('_')[0]
+        #     if shotId in shotWiseBodyTrack.keys():
+        #         shotWiseBodyTrack[shotId].append(bodyTrack)
+        #     else:
+        #         shotWiseBodyTrack[shotId] = [bodyTrack]
 
-        # TODO: Combine body tracks when they have same face track associated
-        # In each shot, assigning a bodyTrack to each FaceTrack
-        for shotId, faceTracks in tqdm(shotWiseFaceTracks.items()):
-            if shotId not in shotWiseBodyTrack.keys():
-                continue
-            bodyTracks = shotWiseBodyTrack[shotId]
-            for faceTrack in faceTracks:
-                overlaps = []
-                for bodyTrack in bodyTracks:
-                    overlaps.append([bodyTrack, getNumOverlaps(self.faceTracks[faceTrack], \
-                                                               self.bodyTracks[bodyTrack])])
-                self.faceBodyMap[faceTrack] = max(overlaps, key=lambda x:x[1])[0]
+        # # TODO: Combine body tracks when they have same face track associated
+        # # In each shot, assigning a bodyTrack to each FaceTrack
+        # for shotId, faceTracks in tqdm(shotWiseFaceTracks.items()):
+        #     if shotId not in shotWiseBodyTrack.keys():
+        #         continue
+        #     bodyTracks = shotWiseBodyTrack[shotId]
+        #     for faceTrack in faceTracks:
+        #         overlaps = []
+        #         for bodyTrack in bodyTracks:
+        #             overlaps.append([bodyTrack, getNumOverlaps(self.faceTracks[faceTrack], \
+        #                                                        self.bodyTracks[bodyTrack])])
+        #         self.faceBodyMap[faceTrack] = max(overlaps, key=lambda x:x[1])[0]
         
-        # combine the face tracks which are associated with same body tracks. 
-        for shotId, faceTracks in shotWiseFaceTracks.items():
-            if shotId in shotWiseBodyTrack.keys():
-                bodyFaceTracksMaps = {}
-                for faceTrack in faceTracks:
-                    bodyTrack = self.faceBodyMap[faceTrack]
-                    if bodyTrack in bodyFaceTracksMaps.keys():
-                        bodyFaceTracksMaps[bodyTrack].append(faceTrack)
-                    else:
-                        bodyFaceTracksMaps[bodyTrack] = [faceTrack]
-                for faceTracksGroup in bodyFaceTracksMaps.values():
-                    if len(faceTracksGroup) > 1:
-                        self.combineFaceTracks(faceTracksGroup)
+        # # combine the face tracks which are associated with same body tracks. 
+        # for shotId, faceTracks in shotWiseFaceTracks.items():
+        #     if shotId in shotWiseBodyTrack.keys():
+        #         bodyFaceTracksMaps = {}
+        #         for faceTrack in faceTracks:
+        #             bodyTrack = self.faceBodyMap[faceTrack]
+        #             if bodyTrack in bodyFaceTracksMaps.keys():
+        #                 bodyFaceTracksMaps[bodyTrack].append(faceTrack)
+        #             else:
+        #                 bodyFaceTracksMaps[bodyTrack] = [faceTrack]
+        #         for faceTracksGroup in bodyFaceTracksMaps.values():
+        #             if len(faceTracksGroup) > 1:
+        #                 self.combineFaceTracks(faceTracksGroup)
 
         
-        faceBodyMapFile = os.path.join(self.cacheDir, 'face_bodyMap.json')
-        with open(faceBodyMapFile, 'w') as fo:
-            json.dump(self.faceBodyMap, fo)
+        # faceBodyMapFile = os.path.join(self.cacheDir, 'face_bodyMap.json')
+        # with open(faceBodyMapFile, 'w') as fo:
+        #     json.dump(self.faceBodyMap, fo)
         
 
-        # remove the unassociated body tracks
-        for trackId in self.bodyTracks.keys():
-            if trackId not in self.faceBodyMap.values():
-                self.bodyTracks[trackId].pop()
+        # # remove the unassociated body tracks
+        # for trackId in self.bodyTracks.keys():
+        #     if trackId not in self.faceBodyMap.values():
+        #         self.bodyTracks[trackId].pop()
         
     def getBodyTrackEmbeddings(self):
         bodyTrackEmbeddingsFile = os.path.join(self.cacheDir, 'bodyTracksEmbeddings.pkl')
@@ -180,61 +194,21 @@ class VideoPreProcessor():
             writeToPickleFile(self.bodyTracksEmbeddings, bodyTrackEmbeddingsFile)
 
     def visualizeFaceTracks(self):
-        for trackID, boxes in self.bodyTracks.items():  
-            for box in boxes:
-                frameNo = int(round(box[0]*self.framesObj['fps']))
-                if frameNo < len(self.framesObj['frames']):
-                    x1 = int(round(box[1]*self.framesObj['width']))
-                    y1 = int(round(box[2]*self.framesObj['height']))
-                    x2 = int(round(box[3]*self.framesObj['width']))
-                    y2 = int(round(box[4]*self.framesObj['height']))
-                    cv2.rectangle(self.framesObj['frames'][frameNo], (x1, y1),\
-                            (x2, y2), color=(255, 255, 0), thickness=2)
-                    cv2.putText(self.framesObj['frames'][frameNo], str(trackID), \
-                                    (x1+10, y1+10), \
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1)        
-                    
-        for trackID, boxes in self.faceTracks.items():  
-            color = list(np.random.random(size=3) * 256)
-            for box in boxes:
-                frameNo = int(round(box[0]*self.framesObj['fps']))
-                if frameNo < len(self.framesObj['frames']):
-                    x1 = int(round(box[1]*self.framesObj['width']))
-                    y1 = int(round(box[2]*self.framesObj['height']))
-                    x2 = int(round(box[3]*self.framesObj['width']))
-                    y2 = int(round(box[4]*self.framesObj['height']))
-                    cv2.rectangle(self.framesObj['frames'][frameNo], (x1, y1),\
-                            (x2, y2), color=color, thickness=2)
-                    cv2.putText(self.framesObj['frames'][frameNo], str(trackID), \
-                                    (int((x2+x1)/2), int((y2+y1)/2)), \
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-            
-            for box in self.bodyTracks[self.faceBodyMap[trackID]]:
-                frameNo = int(round(box[0]*self.framesObj['fps']))
-                if frameNo < len(self.framesObj['frames']):
-                    x1 = int(round(box[1]*self.framesObj['width']))
-                    y1 = int(round(box[2]*self.framesObj['height']))
-                    x2 = int(round(box[3]*self.framesObj['width']))
-                    y2 = int(round(box[4]*self.framesObj['height']))
-                    cv2.rectangle(self.framesObj['frames'][frameNo], (x1, y1),\
-                            (x2, y2), color=color, thickness=2)
-                    cv2.putText(self.framesObj['frames'][frameNo], str(self.faceBodyMap[trackID]), \
-                                    (x1+10, y1+10), \
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-                    
-
-        videoSavePath = os.path.join(self.cacheDir, 'face_tracks_sanity_check.mp4')
-        video_writer = cv2.VideoWriter(videoSavePath, cv2.VideoWriter_fourcc(*'mp4v'), \
-                                   self.framesObj['fps'], (int(self.framesObj['width']), int(self.framesObj['height'])))
-        for frame in self.framesObj['frames']:
-            video_writer.write(frame)
-        video_writer.release()
+        colors = {trackId: list(np.random.random(size=3) * 256) for trackId in self.bodyTracks.keys()}
+        framesObj = plot_tracks(self.framesObj, self.faceTracks, colors)
+        framesObj = plot_tracks(framesObj, self.bodyTracks, colors)
+        videoSavePath = os.path.join(self.cacheDir, 'face_body_tracks_sanity_check.mp4')
+        writeVideo(frames = framesObj['frames'], \
+               fps = framesObj['fps'], \
+               width = framesObj['width'],\
+               height = framesObj['height'],\
+               path = videoSavePath)
     
     def run(self):
         self.getVideoFrames()
         self.getFaceTracks()
         self.getBodyTracks()
-        self.mapBodyFace()
+        self.bodyFaceConsistency()
         self.getFaceTrackEmbeddings()
         self.getBodyTrackEmbeddings()
         ## sanity check face tracks  

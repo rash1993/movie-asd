@@ -127,3 +127,31 @@ def inside(box1, box2):
 
 def boxArea(box):
     return (box[2] - box[0])*(box[3] - box[1])
+
+def plot_tracks(framesObj, tracks, color_dict={}):
+    for trackId, track in tracks.items():
+        if trackId in color_dict.keys():
+            color = color_dict[trackId]
+        else:
+            color = list(np.random.random(size=3) * 256)
+        for box in track:
+            frameNo = int(round(box[0]*framesObj['fps']))
+            x1 = int(round(box[1]*framesObj['width']))
+            y1 = int(round(box[2]*framesObj['height']))
+            x2 = int(round(box[3]*framesObj['width']))
+            y2 = int(round(box[4]*framesObj['height']))
+            cv2.rectangle(framesObj['frames'][frameNo], \
+                          (x1, y1), (x2, y2),\
+                          color = color,\
+                          thickness = 2)
+            cv2.putText(framesObj['frames'][frameNo], \
+                        str(trackId), (x1+10, y1+10), \
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+    return framesObj
+
+def writeVideo(frames, fps, width, height, path):
+    video_writer = cv2.VideoWriter(path, cv2.VideoWriter_fourcc(*'mp4v'), \
+                                   fps, (int(width), int(height)))
+    for frame in frames:
+        video_writer.write(frame)
+    video_writer.release()
