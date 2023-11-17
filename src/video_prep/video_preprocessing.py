@@ -212,7 +212,7 @@ class VideoPreProcessor():
         self.getFaceTrackEmbeddings()
         self.getBodyTrackEmbeddings()
         ## sanity check face tracks  
-        self.visualizeFaceTracks()
+        # self.visualizeFaceTracks()
         
             
 
