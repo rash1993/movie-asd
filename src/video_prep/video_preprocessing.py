@@ -17,6 +17,7 @@ from video_prep.vggFace2_embeddings import VggFace2Embeddings
 from video_prep.yolov8_with_sort import YoloWithSortTracker
 from video_prep.dinov2_embeddings import DinoV2Embeddings
 from video_prep.video_utils import body_face_consistency
+from video_prep.body_feat_extracter import Extractor as BodyFeatureExtractor
 
 
 
@@ -190,7 +191,10 @@ class VideoPreProcessor():
         else:
             if self.verbose:
                 print(f'computing bodyTracks embeddings and savign at {bodyTrackEmbeddingsFile}')
-            self.bodyTracksEmbeddings = DinoV2Embeddings().run(self.framesObj, self.bodyTracks)
+            self.bodyTracksEmbeddings = BodyFeatureExtractor(self.framesObj, \
+                                                             self.bodyTracks,\
+                                                             128, 256).extract_features()
+            # self.bodyTracksEmbeddings = DinoV2Embeddings().run(self.framesObj, self.bodyTracks)
             writeToPickleFile(self.bodyTracksEmbeddings, bodyTrackEmbeddingsFile)
 
     def visualizeFaceTracks(self):

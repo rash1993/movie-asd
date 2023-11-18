@@ -58,5 +58,8 @@ if __name__ == '__main__':
     asdFramework.visualizeDistanceMatrices()
     print(f'time elapsed: {time.time() - st}')
 
-    diarize = Diarize(asdFramework, cacheDir).run()
+    diarize = Diarize(asdFramework, \
+                      preprocessor.videoPrep.bodyTracks, \
+                      preprocessor.videoPrep.bodyTracksEmbeddings, \
+                      cacheDir).run()
     asdFramework.visualizeASD(args.videoPath, debug=True, charFaceIds=diarize) 

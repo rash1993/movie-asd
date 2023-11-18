@@ -44,15 +44,20 @@ class ASD():
                                                       self.faceTracks,\
                                                       self.guides,\
                                                       self.verbose)
-        self.asd = speechFaceAssociation.handler(partitionLen)
+        asdSaveFile = os.path.join(self.cacheDir, 'asd.pkl')
+        if os.path.isfile(asdSaveFile):
+            self.asd = pkl.load(open(asdSaveFile, 'rb'))
+        else:
+            self.asd = speechFaceAssociation.handler(partitionLen)
+            writeToPickleFile(self.asd, asdSaveFile)
         # self.offscreenSpeakercorrection2()
         # self.offscreenSpeakercorrection()
         # audioDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), modality='speech')
         # faceDistances = self.distances.computeDistanceMatrix(keys=self.asd.keys(), asd=self.asd, modality='face')
         # corr = self.similarity.computeAvgSimilarity(audioDistances, faceDistances, avg=False)
         # print([[key, corr_] for key, corr_ in zip(self.asd.keys(), corr)])
-        asdSaveFile = os.path.join(self.cacheDir, 'asd.pkl')
-        writeToPickleFile(self.asd, asdSaveFile)
+       
+        
     
     def visualizeDistanceMatrices(self):
         speechKeys = list(self.asd.keys())

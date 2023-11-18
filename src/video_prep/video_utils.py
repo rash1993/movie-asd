@@ -102,11 +102,11 @@ def constrain_body_tracks(faceTracks, bodyTracks, fps):
                 if frame in frame_wise_faces.keys():
                     face_x1, face_y1, face_x2, face_y2 = frame_wise_faces[frame][1:5]
                     # restricting the body height to max of 4x the face height
-                    body_y2 = min(body_y2, face_y2 + 3*(face_y2 - face_y1))
-                    body_y1 = max(body_y1, face_y2) # body starts below the face
-                    face_center_x = (face_x1 + face_x2)/ 2
-                    body_x1 = max(body_x1 ,face_center_x - 1.5*(face_x2 - face_x1))
-                    body_x2 = min(body_x2, face_center_x + 1.5*(face_x2 - face_x1))
+                    # body_y2 = min(body_y2, face_y2 + 3*(face_y2 - face_y1))
+                    # body_y1 = max(body_y1, face_y2) # body starts below the face
+                    # face_center_x = (face_x1 + face_x2)/ 2
+                    # body_x1 = max(body_x1 ,face_center_x - 1.5*(face_x2 - face_x1))
+                    # body_x2 = min(body_x2, face_center_x + 1.5*(face_x2 - face_x1))
                     bodyTrackOut.append([ts, body_x1, body_y1, body_x2, body_y2] + box[5:])
                 else:
                     bodyTrackOut.append(box)

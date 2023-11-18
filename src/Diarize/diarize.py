@@ -12,6 +12,7 @@ from scipy.spatial.distance import cdist
 from matplotlib import pyplot as plt
 import random, os
 from collections import defaultdict
+from graph_based_clustering.main import  ConnectedComponentsClustering
 random.seed(1010)
 
 class Graph:
@@ -60,10 +61,12 @@ class Graph:
                 return cc
 
 class Diarize():
-    def __init__(self, asdFramework, cacheDir):
+    def __init__(self, asdFramework, bodyTracks, bodyFeatures, cacheDir):
         self.pipe =  asdFramework
         self.speechFeatures = asdFramework.speechFeatures
         self.faceFeatures = asdFramework.faceFeatures
+        self.bodyFeatures = bodyTracks
+        self.bodyFeatures = bodyFeatures
         self.cacheDir = cacheDir
     
     def dist(self, x, y):
@@ -180,31 +183,63 @@ class Diarize():
                   component[i] = keys[item]
         return connected_components
 
+
+
     def combineFaceClustersUsingSpeech(self, faceClusters):
         # faceIdToCluster = {value: key for key, value in faceClusters.items()}
+        clusterWiseFaceTracks = {value: [] for value in list(set(list(faceClusters.values()))) }
+        for clusterKey in clusterWiseFaceTracks.keys():
+            tracks = [key for key, value in faceClusters.items() if value == clusterKey]
+            clusterWiseFaceTracks[clusterKey] = tracks
+
         
-        faceClusterSpeechRep = {key: [] for key in list(set(list(faceClusters.values())))}
-        print(faceClusterSpeechRep.keys())
+        
+        faceClusterSpeechRep = {key: [] for key in list(clusterWiseFaceTracks.keys())}
         for speechKey, faceKey in self.pipe.asd.items():
             faceClusterSpeechRep[faceClusters[faceKey]].append(self.pipe.speechFeatures[speechKey].numpy().reshape(-1))
         noSpeechKeys = [key for key, value in faceClusterSpeechRep.items() if len(value) == 0]
-        print(noSpeechKeys)
+        # print(noSpeechKeys)
         faceClusterSpeechRep = {key: np.mean(np.array(value), axis=0) \
                                 for key, value in faceClusterSpeechRep.items() if key not in noSpeechKeys}
         
         faceClusterSpeechDistanceMatrix = np.zeros((len(faceClusterSpeechRep.keys()), \
                                                    len(faceClusterSpeechRep.keys())))
         keys = list(faceClusterSpeechRep.keys())
+        clusterWiseTemporalOverlap = np.zeros((len(keys), \
+                                                   len(keys)))
+        
         for i, keyi in enumerate(keys):
             for j, keyj in enumerate(keys):
-                faceClusterSpeechDistanceMatrix[i,j] = cdist(faceClusterSpeechRep[keyi].reshape(1, -1),\
-                                                             faceClusterSpeechRep[keyj].reshape(1, -1),\
-                                                             metric='cosine')[0,0]
-        
+                tracksi = clusterWiseFaceTracks[keyi]
+                tracksj = clusterWiseFaceTracks[keyj]
+                overlap_count = 0
+                for faceTrackA in tracksi:
+                    for faceTrackB in tracksj:
+                        if self.faceTrackOverlap(faceTrackA, faceTrackB) > 0:
+                             overlap_count += 1
+                             break
+                clusterWiseTemporalOverlap[i, j] = overlap_count / len(tracksi)  
+        print(clusterWiseTemporalOverlap)
+        overlap_th = 0.05
+
+        for i, keyi in enumerate(keys):
+            for j, keyj in enumerate(keys):
+                if (clusterWiseTemporalOverlap[i, j] < overlap_th) and (clusterWiseTemporalOverlap[j, i] < overlap_th):
+                    faceClusterSpeechDistanceMatrix[i,j] = cdist(faceClusterSpeechRep[keyi].reshape(1, -1),\
+                                                                faceClusterSpeechRep[keyj].reshape(1, -1),\
+                                                                metric='cosine')[0,0]
+                else:
+                    faceClusterSpeechDistanceMatrix[i,j] = 1
+
+
         th = 0.2
         adj = faceClusterSpeechDistanceMatrix < th
         adj = adj.astype(int)
+        
         # TODO: correct the adjcency correspondences
+        # remove the connections where face clusteres have temporal overlaps
+        # (assuming that the face-clusters have high homogeneity)
+
         connected_components = self.getConnectedComponents(adj, list(faceClusterSpeechRep.keys()))
         # print(connected_components)
         clusterMap = {key: key for key in noSpeechKeys}
@@ -266,20 +301,33 @@ class Diarize():
                     distanceMatrix[i,j] = np.max(distanceMatrix)
 
         plt.clf()
-        plt.imshow(distanceMatrix, vmin=0, vmax=2)
+        plt.imshow(distanceMatrix)
         plt.colorbar()
         plt.savefig(os.path.join(plotsDir, 'all_faces_temporal_overlap_fixed.png'), dpi=300)
         
         # distanceMatrix = 1 - distanceMatrix
         delta = 10
         distanceMatrix = np.exp(- distanceMatrix ** 2 / (2. *delta ** 2))
+        # for i in range(len(distanceMatrix)):
+        #      distanceMatrix[i,i] = np.min(distanceMatrix)
+        for i, keyi in enumerate(keys):
+            facei = keyi
+            for j, keyj in enumerate(keys):
+                facej = keyj
+                if facei == facej:
+                    continue
+                if self.faceTrackOverlap(facej, facei) > 0:
+                    distanceMatrix[i,j] = np.min(distanceMatrix)
         faceClusterer = AffinityPropagation(damping=0.5).fit(distanceMatrix)
-        self.faceClusters = {key:clusterId for key, clusterId in zip(keys, faceClusterer.labels_)}
 
+
+        self.faceClusters = {key:clusterId for key, clusterId in zip(keys, faceClusterer.labels_)}
         # arrange the keys according to clusters
         clusters = defaultdict(lambda: [])
         for key, id in self.faceClusters.items():
             clusters[id].append(key)
+
+        print('face clustering keys', clusters.keys())
         arranged_keys = []
         for value in clusters.values():
             arranged_keys.extend(value)
@@ -296,15 +344,35 @@ class Diarize():
         clusters = defaultdict(lambda: [])
         for key, id in self.faceClusters.items():
             clusters[id].append(key)
-        arranged_keys = []
-        for value in clusters.values():
-            arranged_keys.extend(value)
         
+        print('keys after combining using speech', clusters.keys())
+        arranged_keys = []
+        for key, value in clusters.items():
+            arranged_keys.extend(value)
+        # for key, value in clusters.items():
+        #     print(key, len(value))
+
         distanceMatrix = self.pipe.distances.computeDistanceMatrix(arranged_keys, modality='face_raw')
         plt.clf()
         plt.imshow(distanceMatrix)
         plt.colorbar()
         plt.savefig(os.path.join(plotsDir, 'all_faces_clustered_keys_combined.png'), dpi=300)
+        
+        bodyKeys = set(arranged_keys).intersection(set(list(self.bodyFeatures.keys())))
+        print('difference in keys:', len(arranged_keys) - len(bodyKeys))
+        arranged_keys = [key for key in arranged_keys if key in bodyKeys]
+        distanceMatrix = np.zeros((len(arranged_keys), len(arranged_keys)))
+
+
+        for i, keyi in enumerate(arranged_keys):
+             for j, keyj in enumerate(arranged_keys):
+                  distanceMatrix[i,j] = cdist(self.bodyFeatures[keyi].reshape(1, -1),\
+                                              self.bodyFeatures[keyj].reshape(1, -1),\
+                                              metric='cosine')[0,0]
+        plt.clf()
+        plt.imshow(distanceMatrix)
+        plt.colorbar()
+        plt.savefig(os.path.join(plotsDir, 'clustered_faces_body_distance_matrix.png'), dpi=300)
 
     def run(self):
         # self.clusterASD()

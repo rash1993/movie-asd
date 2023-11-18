@@ -20,6 +20,8 @@ class VggFace2Embeddings():
     def selBestFaces(self, faceTrack, N=4):
         # select the top N faces with the maximum distances between the eyes\
         # as a proxy for the frontal faces. 
+        if N== -1:
+            return faceTrack
         faceTrack.sort(key=lambda x: getEyeDistance(np.array(x[-1]).reshape((-1, 2))), reverse=True)
         return faceTrack[:N]
 
@@ -28,7 +30,7 @@ class VggFace2Embeddings():
         crops = []
         cropIDs = []
         for faceTrack in tqdm(faceTracksList, desc='extracting image crops for face tracks'):
-            bestFaces = self.selBestFaces(self.faceTracks[faceTrack])
+            bestFaces = self.selBestFaces(self.faceTracks[faceTrack], N=-1)
             for box in bestFaces:
                 frameNum = int(round(box[0]*self.framesObj['fps']))
                 x1 = int(np.max((0, round(box[1]*self.framesObj['width']))))  # type: ignore                
