@@ -219,7 +219,7 @@ class Diarize():
                              overlap_count += 1
                              break
                 clusterWiseTemporalOverlap[i, j] = overlap_count / len(tracksi)  
-        print(clusterWiseTemporalOverlap)
+        # print(clusterWiseTemporalOverlap)
         overlap_th = 0.05
 
         for i, keyi in enumerate(keys):
@@ -232,7 +232,7 @@ class Diarize():
                     faceClusterSpeechDistanceMatrix[i,j] = 1
 
 
-        th = 0.18
+        th = 0.20
         adj = faceClusterSpeechDistanceMatrix < th
         adj = adj.astype(int)
         

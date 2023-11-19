@@ -67,7 +67,7 @@ if __name__ == '__main__':
                         preprocessor.videoPrep.bodyTracks, \
                         preprocessor.videoPrep.bodyTracksEmbeddings, \
                         cacheDir).run(ASD=ASD_only_flag)
-        asdFramework.visualizeASD(args.videoPath, debug=True, charFaceIds=diarize) 
+        # asdFramework.visualizeASD(args.videoPath, debug=True, charFaceIds=diarize) 
         visualizeCharacterInfo(args.videoPath, \
                                os.path.join(cacheDir, 'characterWiseFaceSpeech.pkl'), \
                                cacheDir )

@@ -227,3 +227,4 @@ def visualizeCharacterInfo(videoPath, filePath, cacheDir=None):
                height = framesObj['height'],\
                path = videoOutFile)          
     merge_audio_with_video(videoPath, videoOutFile, cacheDir)
+    print(f'Character video saved a {videoOutFile}')
