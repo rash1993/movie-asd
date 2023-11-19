@@ -1,5 +1,7 @@
 # movie-asd
 
++ Character diarization: This repository now supports character grouping which utilizes character faces and character speech information. 
+
 Hi there! This repo provides the code and setup for 
 * [Cross-modal identity association (CMIA)](https://arxiv.org/abs/2209.11896) framework for active speaker detection. 
 * [Audio-visual activity guided CMIA for active speaker detection](https://ieeexplore.ieee.org/abstract/document/10102534).
@@ -39,9 +41,19 @@ python3 main.py --videoPath <path_to_video in mp4> --cacheDir <path to store the
 ```
 The above snippet will generate a video with active speakers' faces bounded in a green bounding box while all other boxes are in the red bounding box. An example output video is shown below.
 
+
 ![](https://github.com/rash1993/movie-asd/blob/wacv/gif_v0.gif)
 
 The improved performance with the use of `TalkNet` comes with increased processing time. In case of smaller videos (<5min) removing the field `--partitionLength` may improve performance with a slight increase in processing time. For the longer videos the `--partitionLength` is important for reasonable processing time and we recommend keeping it `50` is recommended.
+
+## Character Diarization
+
+To generate character clusters use the `--diarize` flag as follows. This will generate a file `characterSpeechFace.pkl` in the `cache` directory which will have character-wise face, body and speech occurrences for all the clustered characters. It will also generate a video `*_diarize.mp4` which visualizes the character diarization.
+```
+cd src
+python3 main.py --videoPath <path_to_video in mp4> --cacheDir <path to store the intermediate artifacts> --partitionLength 50 --talknet --diarize
+```
+
 
 Please cite the following works if you use this framework.
 ```
@@ -60,6 +72,15 @@ Please cite the following works if you use this framework.
   title={Unsupervised active speaker detection in media content using cross-modal information},
   author={Sharma, Rahul and Narayanan, Shrikanth},
   journal={arXiv preprint arXiv:2209.11896},
+  year={2022}
+}
+
+Character Diarization
+
+@article{sharma2022using,
+  title={Using active speaker faces for diarization in TV shows},
+  author={Sharma, Rahul and Narayanan, Shrikanth},
+  journal={arXiv preprint arXiv:2203.15961},
   year={2022}
 }
 ```
