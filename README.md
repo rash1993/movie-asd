@@ -66,17 +66,17 @@ Please cite the following works if you use this framework.
   number={},
   pages={225-232},
   doi={10.1109/OJSP.2023.3267269}}
-```
-```
+
+
 @article{sharma2022unsupervised,
   title={Unsupervised active speaker detection in media content using cross-modal information},
   author={Sharma, Rahul and Narayanan, Shrikanth},
   journal={arXiv preprint arXiv:2209.11896},
   year={2022}
 }
-
+```
 Character Diarization
-
+```
 @article{sharma2022using,
   title={Using active speaker faces for diarization in TV shows},
   author={Sharma, Rahul and Narayanan, Shrikanth},
