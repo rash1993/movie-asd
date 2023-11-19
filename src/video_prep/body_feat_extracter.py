@@ -73,7 +73,7 @@ class Extractor(object):
         self.model.eval()
         dataset = BodyCropsDataset(framesObj, bodyTracks, body_crop_w, body_crop_h)
         sampler = SequentialSampler(dataset)
-        self.dataLoader = DataLoader(dataset, batch_size=1024, sampler=sampler)
+        self.dataLoader = DataLoader(dataset, batch_size=256, sampler=sampler)
 
     def extract_features(self):
         outBoxIds = []
@@ -95,4 +95,5 @@ class Extractor(object):
         
         for trackId, features in bodyTrackFeatures.items():
             bodyTrackFeatures[trackId] = np.mean(features, axis=0)
+        torch.cuda.empty_cache()
         return bodyTrackFeatures

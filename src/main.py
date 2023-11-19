@@ -12,6 +12,7 @@ from preprocessor import Preprocessor
 from ASD.ASD_framework import ASD
 from TalkNet.TalkNet_wrapper import TalkNetWrapper
 from Diarize.diarize import Diarize
+from local_utils import visualizeCharacterInfo
 import time
 
 if __name__ == '__main__':
@@ -22,6 +23,7 @@ if __name__ == '__main__':
     args.add_argument('--partitionLength', type=int, default=-1, help='length of partition in number of speech segments')
     args.add_argument('--talknet', action='store_true', help='use the talknet as guides for CMIA')
     args.add_argument('--diarize', action='store_true', help='flag to enable character diarization')
+    args.add_argument('--diarize_ASD_only', action='store_true', help='flag for clustering just the active speaker faces rahter than all faces')
     args = args.parse_args()
     videoName = os.path.basename(args.videoPath)[:-4]
     cacheDir = os.path.join(args.cacheDir, videoName)
@@ -58,8 +60,14 @@ if __name__ == '__main__':
     asdFramework.visualizeDistanceMatrices()
     print(f'time elapsed: {time.time() - st}')
 
-    diarize = Diarize(asdFramework, \
-                      preprocessor.videoPrep.bodyTracks, \
-                      preprocessor.videoPrep.bodyTracksEmbeddings, \
-                      cacheDir).run()
-    asdFramework.visualizeASD(args.videoPath, debug=True, charFaceIds=diarize) 
+    if args.diarize or args.diarize_ASD_only:
+        ASD_only_flag = True if args.diarize_ASD_only else False
+        
+        diarize = Diarize(asdFramework, \
+                        preprocessor.videoPrep.bodyTracks, \
+                        preprocessor.videoPrep.bodyTracksEmbeddings, \
+                        cacheDir).run(ASD=ASD_only_flag)
+        asdFramework.visualizeASD(args.videoPath, debug=True, charFaceIds=diarize) 
+        visualizeCharacterInfo(args.videoPath, \
+                               os.path.join(cacheDir, 'characterWiseFaceSpeech.pkl'), \
+                               cacheDir )

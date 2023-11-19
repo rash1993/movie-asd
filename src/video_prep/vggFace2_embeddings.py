@@ -11,6 +11,8 @@ from tqdm import tqdm
 from Keras_VGGFace2_ResNet50.src.wrapper import initialize_model, image_encoding
 from local_utils import getEyeDistance
 from collections import Counter
+import tensorflow as tf
+import torch
 
 class VggFace2Embeddings():
     def __init__(self, framesObj, faceTracks):

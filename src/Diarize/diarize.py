@@ -12,7 +12,7 @@ from scipy.spatial.distance import cdist
 from matplotlib import pyplot as plt
 import random, os
 from collections import defaultdict
-from graph_based_clustering.main import  ConnectedComponentsClustering
+from local_utils import writeToPickleFile
 random.seed(1010)
 
 class Graph:
@@ -65,7 +65,7 @@ class Diarize():
         self.pipe =  asdFramework
         self.speechFeatures = asdFramework.speechFeatures
         self.faceFeatures = asdFramework.faceFeatures
-        self.bodyFeatures = bodyTracks
+        self.bodyTracks = bodyTracks
         self.bodyFeatures = bodyFeatures
         self.cacheDir = cacheDir
     
@@ -232,7 +232,7 @@ class Diarize():
                     faceClusterSpeechDistanceMatrix[i,j] = 1
 
 
-        th = 0.2
+        th = 0.18
         adj = faceClusterSpeechDistanceMatrix < th
         adj = adj.astype(int)
         
@@ -259,9 +259,12 @@ class Diarize():
             faceClusters[key] = clusterMap[faceClusters[key]]
         return faceClusters
 
-    def clusterFaces(self):
+    def clusterFaces(self, ASD):
         # use all the faces
-        keys = list(self.faceFeatures.keys())
+        if ASD: 
+            keys = set(list(self.faceFeatures.keys())).intersection(set(list(self.pipe.asd.values())))
+        else:
+            keys = list(self.faceFeatures.keys())
         distanceMatrix = self.pipe.distances.computeDistanceMatrix(keys, modality='face_raw')
         plotsDir = os.path.join(self.cacheDir, 'plots')
         os.makedirs(plotsDir, exist_ok=True)
@@ -374,9 +377,42 @@ class Diarize():
         plt.colorbar()
         plt.savefig(os.path.join(plotsDir, 'clustered_faces_body_distance_matrix.png'), dpi=300)
 
-    def run(self):
-        # self.clusterASD()
-        self.clusterFaces()
-        # return a dictionary of faceIds and labelIds
+    def characterWiseInfo(self):
+        characters = {}
 
+        faceTrackWiseSpeech = {}
+        for speechId, faceTrackId in self.pipe.asd.items():
+            if faceTrackId in faceTrackWiseSpeech.keys():
+                faceTrackWiseSpeech[faceTrackId].append(self.pipe.speechFaceTracks[speechId]['speech'])
+            else:
+                faceTrackWiseSpeech[faceTrackId] = [self.pipe.speechFaceTracks[speechId]['speech']]
+
+        # accumulate the faces for each character
+        for faceTrackId, clusterId in self.faceClusters.items():
+            if clusterId in characters.keys():
+                 characters[clusterId]['faces'].append(self.pipe.faceTracks[faceTrackId])
+                 if faceTrackId in faceTrackWiseSpeech.keys():
+                    characters[clusterId]['speech'].extend(faceTrackWiseSpeech[faceTrackId])
+                 if faceTrackId in self.bodyTracks.keys():
+                    characters[clusterId]['bodys'].append(self.bodyTracks[faceTrackId])
+            else:
+                characters[clusterId] = {'faces': [self.pipe.faceTracks[faceTrackId]]}
+                if faceTrackId in faceTrackWiseSpeech.keys():
+                    characters[clusterId]['speech'] = faceTrackWiseSpeech[faceTrackId]
+                else:
+                    characters[clusterId]['speech'] = []                      
+                if faceTrackId in self.bodyTracks.keys():
+                    characters[clusterId]['bodys'] = [self.bodyTracks[faceTrackId]]
+                else:
+                    characters[clusterId]['bodys'] = []
+        return characters
+
+    def run(self, ASD=False):
+        # self.clusterASD()
+        self.clusterFaces(ASD)
+        characterWiseInfo = self.characterWiseInfo()
+        characterInfoFile = os.path.join(self.cacheDir, 'characterWiseFaceSpeech.pkl')
+        writeToPickleFile(characterWiseInfo, characterInfoFile)
+        print(f'characterWise info save in {characterInfoFile}')
+        # return a dictionary of faceIds and labelIds
         return self.faceClusters

@@ -10,6 +10,7 @@ import cv2, subprocess, os, csv
 import pickle as pkl
 from tqdm import tqdm 
 import numpy as np
+from numba import cuda
 
 def readVideoFrames(videoPath, res=(180, 360)):
     """method to read all the frames of a video file.
@@ -128,7 +129,7 @@ def inside(box1, box2):
 def boxArea(box):
     return (box[2] - box[0])*(box[3] - box[1])
 
-def plot_tracks(framesObj, tracks, color_dict={}):
+def plot_tracks(framesObj, tracks, color_dict={}, speechTag=False):
     for trackId, track in tracks.items():
         if trackId in color_dict.keys():
             color = color_dict[trackId]
@@ -147,6 +148,12 @@ def plot_tracks(framesObj, tracks, color_dict={}):
             cv2.putText(framesObj['frames'][frameNo], \
                         str(trackId), (x1+10, y1+10), \
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+            if speechTag:
+                if box[-1]:
+                    cv2.putText(framesObj['frames'][frameNo], \
+                                str('speaking'), (x1, y2+10), \
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
     return framesObj
 
 def writeVideo(frames, fps, width, height, path):
@@ -155,3 +162,68 @@ def writeVideo(frames, fps, width, height, path):
     for frame in frames:
         video_writer.write(frame)
     video_writer.release()
+
+def merge_audio_with_video(videoFile, videoOutFile, cacheDir):
+    videoOutFile_temp = videoFile[:-4] + '_temp.mp4'
+    os.rename(f'{videoOutFile}', videoOutFile_temp)
+    wavPath = os.path.join(cacheDir, 'audio.wav')
+    if not os.path.isfile(wavPath):
+        wavCmd = f'ffmpeg -loglevel error -y -nostdin -loglevel error -y -i {videoFile} \
+            -ar 16k -ac 1 {wavPath}'
+        subprocess.call(wavCmd, shell=True, stdout=False)
+    audio_video_merge_cmd  = f'ffmpeg -loglevel error -i {videoOutFile_temp} -i {wavPath} -c:v copy -c:a aac {videoOutFile}'
+    subprocess.call(audio_video_merge_cmd, shell=True, stdout=False)
+
+def clear_gpus():
+    cuda.select_device(0)
+    cuda.close()
+
+def visualizeCharacterInfo(videoPath, filePath, cacheDir=None):
+    # read frames
+    if cacheDir:
+        frameObjFile = os.path.join(cacheDir, 'frames.pkl')
+        if os.path.isfile(frameObjFile):
+            framesObj = pkl.load(open(frameObjFile, 'rb'))
+        else:
+            framesObj = readVideoFrames(videoPath)
+
+    # read character info from the file
+    characterWise = pkl.load(open(filePath, 'rb'))
+    tracks = {}
+    colors = {}
+    for characterId in characterWise.keys():
+        tracks[characterId] = []
+        faceTracks  = characterWise[characterId]['faces']
+        bodyTracks = characterWise[characterId]['bodys']
+        speech = characterWise[characterId]['speech']
+        colors[characterId] = list(np.random.random(size=3) * 256)
+        
+        # add a tag of speaking / notspeaking in faceTracks
+        fps = framesObj['fps']
+        speakingFrames = []
+        for segemnt in speech:
+            st, et = segemnt
+            startFrame = int(round(st*fps))
+            endFrame = int(round(et*fps))
+            speakingFrames.extend(list(range(startFrame, endFrame)))
+        for faceTrack in faceTracks:
+            for box in faceTrack:
+                if int(round(box[0]*fps)) in speakingFrames:
+                    box = box + [True]
+                else:
+                    box = box + [False]
+                tracks[characterId].append(box)
+        # add the body boxes with speaking tag 0
+        for bodyTrack in bodyTracks:
+            for box in bodyTrack:
+                box = box + [False]
+                tracks[characterId].append(box) 
+    framesObj = plot_tracks(framesObj, tracks, color_dict=colors, speechTag=True)       
+
+    videoOutFile = os.path.join(cacheDir, os.path.basename(videoPath)[:-4] + '_diarize.mp4')
+    writeVideo(frames = framesObj['frames'], \
+               fps = framesObj['fps'], \
+               width = framesObj['width'],\
+               height = framesObj['height'],\
+               path = videoOutFile)          
+    merge_audio_with_video(videoPath, videoOutFile, cacheDir)

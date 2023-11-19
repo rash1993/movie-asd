@@ -12,6 +12,14 @@ from tqdm import tqdm
 from ultralyticsplus import YOLO
 from sort.sort import Sort
 from local_utils import shotDetect
+import torch
+
+def split_lines(lines, batch_size):
+    splits = []
+    for i in range(0, len(lines), batch_size):
+        splits.append(lines[i: i+ batch_size])
+    return splits
+
 
 class YoloWithSortTracker():
     def __init__(self, videoPath, cacheDir, frameObj):
@@ -36,7 +44,13 @@ class YoloWithSortTracker():
         img_height, img_width, _ = frames[0].shape
         tracks = {}
         tracker = Sort()
-        detections = self.model.predict(frames, verbose=False)
+
+        frames_splits = split_lines(frames, batch_size=512)
+        detections = []
+        for frames_split in frames_splits:
+            detections.extend(self.model.predict(frames_split, verbose=False))
+
+        
         for ctr, frame_dets in enumerate(detections):
             dets = []
             for box in frame_dets:
@@ -73,4 +87,5 @@ class YoloWithSortTracker():
         for shot in tqdm(self.shots, desc='extracting body tracks for each shot'):
             shotTracks = self.getBodyTrackInShot(shot)
             tracks.update(shotTracks)
+        torch.cuda.empty_cache()
         return tracks            

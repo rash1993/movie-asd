@@ -80,4 +80,5 @@ class DinoV2Embeddings():
                 outputs[trackId] = np.mean(embeddings, axis=0)
             else:
                 outputs[trackId].pop()
+        torch.cuda.empty_cache()
         return outputs

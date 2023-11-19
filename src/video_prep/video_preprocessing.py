@@ -10,7 +10,7 @@ import pickle as pkl
 import numpy as np
 sys.path.append('../')
 sys.path.append('../../')
-from local_utils import readVideoFrames, writeToPickleFile, plot_tracks, writeVideo
+from local_utils import readVideoFrames, writeToPickleFile, plot_tracks, writeVideo, clear_gpus
 from tqdm import tqdm
 from video_prep.retina_face import RetinaFaceWithSortTracker
 from video_prep.vggFace2_embeddings import VggFace2Embeddings
@@ -57,6 +57,9 @@ class VideoPreProcessor():
                 sys.exit(f'face detector {self.faceDetectorName} not implemented')
             self.faceTracks = self.faceDetector.run()
             writeToPickleFile(self.faceTracks, faceTracksFilePath) 
+        # clear_gpus()
+        # clear the gpu
+        
 
     def getFaceTrackEmbeddings(self, embeddings='vggface2', faceTracksListName='all'):
         if faceTracksListName == 'all':
@@ -76,7 +79,8 @@ class VideoPreProcessor():
             self.embeddingsExtracter = VggFace2Embeddings(self.framesObj, self.faceTracks)
             self.faceTrackFeats = self.embeddingsExtracter.extractEmbeddings(faceTracksList)
             writeToPickleFile(self.faceTrackFeats, faceTracksEmbeddingsFile)
-    
+        # clear_gpus()
+
     def getBodyTracks(self):
         bodyTracksFilePath = os.path.join(self.cacheDir, f'body_tracks.pkl')
         if os.path.isfile(bodyTracksFilePath):
@@ -91,7 +95,9 @@ class VideoPreProcessor():
                                                     self.framesObj)
             self.bodyTracks = self.bodyDetector.run()
             writeToPickleFile(self.bodyTracks, bodyTracksFilePath)
-    
+        
+        # clear_gpus()
+
     def combineFaceTracks(self, faceTracksGroup):
         # print(len(faceTracksGroup), len(self.faceTracks.keys()), len(self.faceBodyMap.keys()))
         # combine the faces of the tracks
@@ -196,6 +202,8 @@ class VideoPreProcessor():
                                                              128, 256).extract_features()
             # self.bodyTracksEmbeddings = DinoV2Embeddings().run(self.framesObj, self.bodyTracks)
             writeToPickleFile(self.bodyTracksEmbeddings, bodyTrackEmbeddingsFile)
+        # clear_gpus()
+
 
     def visualizeFaceTracks(self):
         colors = {trackId: list(np.random.random(size=3) * 256) for trackId in self.bodyTracks.keys()}
@@ -213,8 +221,8 @@ class VideoPreProcessor():
         self.getFaceTracks()
         self.getBodyTracks()
         self.bodyFaceConsistency()
-        self.getFaceTrackEmbeddings()
         self.getBodyTrackEmbeddings()
+        self.getFaceTrackEmbeddings()
         ## sanity check face tracks  
         # self.visualizeFaceTracks()
         
