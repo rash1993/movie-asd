@@ -109,7 +109,7 @@ class SpeechFaceAssociation():
                 partitions[-2] = partitions[-2] + partitions[-1]
                 del partitions[-1]
             for partitionNum, partition in enumerate(partitions):
-                print(f'optimizing the partition {partitionNum} of {len(partitions)}')
+                print(f'optimizing the partition {partitionNum + 1} of {len(partitions)}')
                 asd, posGuides, negGuides = self.initializeASD(partition)
                 asd = self.findSpeechFaceAssociationPartion(asd, posGuides, negGuides)
                 # asd = self.offscreenSpeakercorrection2(asd)

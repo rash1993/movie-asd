@@ -103,7 +103,7 @@ def write_lines(fname, lines):
   f.close()
 
 def make_temp(ext, contents = None, dir = None):
-  fd, fname = tempfile.mkstemp(ext, prefix = 'ao_', dir = '/home/azureuser/cloudfiles/code/temp')
+  fd, fname = tempfile.mkstemp(ext, prefix = 'ao_', dir = '/home/shar789/')
   os.close(fd)
   if contents is not None:
     make_file(fname, contents)

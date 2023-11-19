@@ -121,5 +121,7 @@ class RetinaFaceWithSortTracker():
         for shot in tqdm(self.shots, desc='extracting face tracks for each shot'):
             shotTracks = self.getFaceTracksInShot(shot)
             tracks.update(shotTracks)
+        torch.cuda.empty_cache()
         return tracks
+    
         
